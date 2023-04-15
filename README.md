@@ -22,7 +22,7 @@
 `bash install.sh multi-node`
 -
 ### IMPORTANT: 
-#### Do not start another multi-node install until the first install progressed till the point where it starts downloading the blockchain. This way the auto-magic port and username functionality works as expected! If you don't like waiting, please have a look at the advanced features below to set the ports and username manually. However, please avoid overloading the server or VPS by starting too many install sessions.
+#### Do not start another multi-node install until the first installation session progressed till the point where it starts downloading the blockchain. This way the auto-magic port and username functionality works as expected! If you don't like waiting, please have a look at the advanced features below to set the ports and username manually. However, please avoid overloading the server or VPS by running too many installation sessions at the same time.
 <br />
 
 ### Preview auto-magic (not a required step)
