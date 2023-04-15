@@ -281,10 +281,10 @@ auto_search_available_username() {
 create_running_user_if_needed() {
    # shellcheck disable=SC2154
    if ! id -u "${config[running_user]}" >/dev/null 2>&1; then
-     echo -e "\033[0;33mWe need to create a user '${config[running_user]}' to run the service node. You will be asked to enter a password for this user next. Please make sure to keep this password safe.\033[0m\n"
+     echo -e "\n\033[1mCreating sudo user '${config[running_user]}' to run service node...\033[0m"
+     echo -e "\n\033[0;33mWe need to create a user '${config[running_user]}' to run the service node. You will be asked to enter a password for this user next. Please make sure to keep this password safe.\033[0m\n"
      read -n 1 -s -r -p "Press ANY key to continue"
 
-     echo -e "\n\033[1mCreating sudo user '${config[running_user]}'\033[0m"
      sudo adduser --gecos GECOS "${config[running_user]}"
      sudo usermod -aG sudo "${config[running_user]}"
    fi
