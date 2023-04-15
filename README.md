@@ -5,6 +5,9 @@
 
 `cd eqsnode-installer-script`
 
+### Build in help function to show the command and options
+`bash install.sh --help`
+-
 ## Installation of single service node
 #### Note: run root user (or sudo user)
 
