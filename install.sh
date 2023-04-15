@@ -194,7 +194,7 @@ validate_port() {
   if [ "${port}" -lt 5000 ] || [ "${port}" -gt 49151 ]; then
     echo "outside_port_range"
 
-  elif ! [[ "$(sudo netstat -lnp | grep ":${port}" | wc -l)" -gt 0 ]]; then
+  elif [[ "$(sudo netstat -lnp | grep ":${port}" | wc -l)" -gt 0 ]]; then
     echo "port_used"
   else
     echo "ok"
