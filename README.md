@@ -1,40 +1,52 @@
 # Equilibria service node easy setup guide
 
-## Download this script from Github
+## Download this script from Github (in homedir)
+`cd ~`
+
 `git clone https://github.com/misterr-labs/eqsnode-installer-script`
 
 `cd eqsnode-installer-script`
 
-### Build in help function to show the command and options
-`bash install.sh --help`
--
-## Installation of single service node
+## Installation of a single service node (first node on VPS or server)
 #### Note: run root user (or sudo user)
 
 `bash install.sh`
 -
-## Out-of-the-box multi service node installation on one VPS or server
+<br />
+
+## Multi service node installation (one VPS or server)
 #### Note: run root user (or sudo user)
 
-### To preview the auto-magic port and username detection (not required)
-`bash install.sh multi-node --preview-auto-magic`
-
-#### Or use the shorthand version
-`bash install.sh multi-node -p`
-
-### To install multiple nodes on one VPS or server
 `bash install.sh multi-node`
 -
-## Customized multi service node installation on one VPS or server
+<br />
 
-### To install an additional nodes on one VPS or server with specific username. Will use auto-ports feature by default.
+### Preview auto-magic (not a required step)
+`bash install.sh multi-node --preview-auto-magic`
+-
+<br />
+
+#### Or use the shorthand version
+
+`bash install.sh multi-node -p`
+
+## Build in help
+`bash install.sh --help`
+-
+
+<br />
+
+## Advanced 'multi-node' features
+
+### To install a 'multi-node' with a specific username. Auto-ports feature is enabled by default.
 `bash install.sh multi-node --username mysnode10`
 
 #### Or use the shorthand version
 `bash install.sh multi-node -u mysnode10`
 
-### To install an additional nodes on one VPS or server with specific username and manual ports config
+### To install a 'multi-node' with specific username and manual ports config
 `bash install.sh multi-node --username mysnode10 --manual-ports p2p:10330,rpc:10331,zmq:10332`
+
 #### Or use the shorthand version
 `bash install.sh multi-node -u mysnode10 -m p2p:10330,rpc:10331,zmq:10332`
 
