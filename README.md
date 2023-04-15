@@ -1,14 +1,14 @@
 # Equilibria service node easy setup guide
 
-## Download this script from Github (in homedir)
-<font size="4">
+## Download this script from Github (in homedir root)
+### Important: Service node will not run under root by default. A new user will automatically be created to run the service!
 
 `cd ~`
 
 `git clone https://github.com/misterr-labs/eqsnode-installer-script`
 
 `cd eqsnode-installer-script`
-</font>
+
 ## Installation of a single service node (first node on VPS or server)
 #### Note: run root user (or sudo user)
 
