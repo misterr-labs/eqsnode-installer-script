@@ -1,12 +1,14 @@
 # Equilibria service node easy setup guide
 
 ## Download this script from Github (in homedir)
+<font size="4">
+
 `cd ~`
 
 `git clone https://github.com/misterr-labs/eqsnode-installer-script`
 
 `cd eqsnode-installer-script`
-
+</font>
 ## Installation of a single service node (first node on VPS or server)
 #### Note: run root user (or sudo user)
 
@@ -24,16 +26,14 @@
 ### Preview auto-magic (not a required step)
 `bash install.sh multi-node --preview-auto-magic`
 -
-<br />
-
 #### Or use the shorthand version
 
 `bash install.sh multi-node -p`
+<br />
 
 ## Build in help
 `bash install.sh --help`
 -
-
 <br />
 
 ## Advanced 'multi-node' features
