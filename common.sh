@@ -1,4 +1,4 @@
-eqnode_installer_version='v2.0'
+eqnode_installer_version='v3.0'
 readonly eqnode_installer_version
 
 installer_session_state_file="${script_basedir}/.installsessionstate"
@@ -12,6 +12,10 @@ config=(
   [install_version]='auto'
   [running_user]='snode'
   [git_repository]='https://github.com/EquilibriaCC/Equilibria.git'
+  [p2p_bind_port]=0
+  [rpc_bind_port]=0
+  [zmq_rpc_bind_port]=0
+  [multi_node]=0
 )
 
 typeset -A installer_state
@@ -28,6 +32,14 @@ installer_state=(
   [finished_eqsnode_install]='finished_eqsnode_install'
 )
 readonly installer_state
+
+typeset -A default_service_node_ports
+default_service_node_ports=(
+  [p2p_bind_port]=9230
+  [rpc_bind_port]=9231
+  [zmq_rpc_bind_port]=9232
+)
+readonly default_service_node_ports
 
 load_config() {
 #  grep -F "#" &>/dev/null

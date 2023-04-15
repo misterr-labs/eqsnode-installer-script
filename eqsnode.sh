@@ -1,6 +1,7 @@
 #! /bin/env bash
 # v1.0 developed by GreggyGB
 # v2.0 by Mister R
+# v3.0 by Mister R
 
 set -o errexit
 set -o nounset
@@ -12,6 +13,11 @@ install_root_service='/etc/systemd/system'
 readonly script_basedir install_root_bin_dir install_root_service
 
 source "${script_basedir}/common.sh"
+
+service_name=
+service_file=
+[[ "${config[multi_node]}" -eq 1 ]] && service_name="eqnode_${config[running_user]}.service" || service_name="eqnode.service"
+service_file="${install_root_service}/${service_name}"
 
 active_user=${USER:=$(/usr/bin/id -run)}
 readonly active_user
@@ -116,13 +122,19 @@ compile_and_move_binaries() {
 build_and_install_service_file() {
   set_install_session_state "${installer_state[install_service]}"
 
-  if [[ -f ${install_root_service}'/eqnode.service' ]]; then
-    echo -e "\n\033[1mRemoving existing '${install_root_service}/eqnode.service' file...\033[0m"
-    sudo rm ${install_root_service}'/eqnode.service'
+  if [[ -f "${service_file}" ]]; then
+    echo -e "\n\033[1mRemoving existing '${service_file}' file...\033[0m"
+    sudo rm "${service_file}"
   fi
 
-  echo -e "\n\033[1mGenerating service file...\033[0m"
-  cat "${service_template}" | sed -e "s/%INSTALL_USERNAME%/${config[running_user]}/g" -e "s#%INSTALL_ROOT%#${install_root_bin_dir}#g" | sudo tee "${install_root_service}/eqnode.service"
+  echo -e "\n\033[1mGenerating service file '${service_file}'...\033[0m"
+  local port_params=''
+
+  if [[ "${config[multi_node]}" -eq 1 ]]; then
+    port_params=" --zmq-rpc-bind-port ${config[zmq_rpc_bind_port]} --p2p-bind-port ${config[p2p_bind_port]} --rpc-bind-port ${config[rpc_bind_port]}"
+  fi
+  # shellcheck disable=SC2002
+  cat "${service_template}" | sed -e "s/%INSTALL_USERNAME%/${config[running_user]}/g" -e "s#%INSTALL_ROOT%#${install_root_bin_dir}#g" -e "s/%PORT_PARAMS%/${port_params}/g" | sudo tee "${service_file}"
 
   echo -e "\n\033[1mReloading service manager...\033[0m"
   sudo systemctl daemon-reload
@@ -132,7 +144,7 @@ enable_service_on_boot() {
   set_install_session_state "${installer_state[enable_service]}"
 
   echo -e "\n\033[1mEnabling service to start automatically upon boot...\033[0m"
-  sudo systemctl enable eqnode.service
+  sudo systemctl enable "${service_name}"
 }
 
 start_service() {
@@ -243,22 +255,22 @@ prepare_sn() {
 }
 
 start() {
-  sudo systemctl start eqnode.service
+  sudo systemctl start "${service_name}"
   echo "Service node started to check it works use bash equilibria.sh log"
 }
 
 status() {
   ~/bin/daemon status
-  #systemctl status eqnode.service
+  #systemctl status "${service_name}"
 }
 
 stop_all_nodes() {
   echo Stopping XEQ node
-  sudo systemctl stop eqnode.service
+  sudo systemctl stop "${service_name}"
 }
 
 log() {
-  sudo journalctl -u eqnode.service -af
+  sudo journalctl -u "${service_name}" -af
 }
 
 update() {
@@ -275,11 +287,11 @@ print_sn_key() {
 #  git submodule init && git submodule update
 #  git checkout "${config[install_version]}"
 #  make
-#  sudo systemctl stop eqnode.service
+#  sudo systemctl stop "${service_name}"
 #  rm -r ~/bin
 #  cd build/Linux/_HEAD_detached_at_"${config[install_version]}"_/release && mv bin ~/
-#  sudo systemctl enable eqnode.service
-#  sudo systemctl start eqnode.service
+#  sudo systemctl enable "${service_name}"
+#  sudo systemctl start "${service_name}"
 #}
 
 usage() {
