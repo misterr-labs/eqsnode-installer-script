@@ -53,7 +53,10 @@ SPLASHMSG
 
 install_dependencies() {
   echo -e "\n\033[1mChecking basic dependencies...\033[0m"
-  sudo apt -y install net-tools python3-natsort bc grep util-linux
+  
+  if ! [[ -x "$(command -v netstat)" && -x "$(command -v natsort)" && -x "$(command -v bc)" && -x "$(command -v grep)" && -x "$(command -v getopt)" ]]; then
+    sudo apt -y install net-tools python3-natsort bc grep util-linux
+  fi
 }
 
 multi_node_command_handler() {
