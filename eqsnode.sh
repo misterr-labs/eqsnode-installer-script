@@ -18,6 +18,7 @@ service_name=
 service_file=
 [[ "${config[multi_node]}" -eq 1 ]] && service_name="eqnode_${config[running_user]}.service" || service_name="eqnode.service"
 service_file="${install_root_service}/${service_name}"
+readonly service_name service_file
 
 port_params=
 if [[ "${config[multi_node]}" -eq 1 ]]; then
@@ -35,15 +36,15 @@ daemon_start_time=
 
 main() {
   case "$1" in
-    install ) install_node ;;
-    prepare_sn ) prepare_sn ;;
-    start ) start ;;
-    stop ) stop_all_nodes ;;
-    status ) status ;;
-    log ) log ;;
-    update ) update ;;
+    install )       install_node ;;
+    prepare_sn )    prepare_sn ;;
+    start )         start ;;
+    stop )          stop_all_nodes ;;
+    status )        status ;;
+    log )           log ;;
+    update )        update ;;
 #    fork_update ) fork_update ;;
-    print_sn_key ) print_sn_key ;;
+    print_sn_key )  print_sn_key ;;
     * ) usage
   esac
 }
@@ -76,18 +77,18 @@ install_manager() {
     echo -e "Skipping ahead to previous exit point...\n"
   fi
 
-  # fall-through case based on installer_session_state_file.
+  # ';&' fall-through case, based on installer_session_state_file.
   case "${current_install_state}" in
-    "${installer_state[started]}") ;&
-    "${installer_state[install_packages]}") install_required_packages ;&
-    "${installer_state[checkout_git]}") checkout_git_repo ;&
-    "${installer_state[compile_move]}") compile_and_move_binaries ;&
-    "${installer_state[install_service]}") build_and_install_service_file ;&
-    "${installer_state[enable_service]}") enable_service_on_boot ;&
-    "${installer_state[start_service]}") start_service ;&
-    "${installer_state[watch_daemon]}") watch_daemon_status ;&
-    "${installer_state[ask_prepare]}") ask_prepare_sn ;&
-    "${installer_state[finished]}") finish_eqsnode_install ;;
+    "${installer_state[started]}")            ;&
+    "${installer_state[install_packages]}")   install_required_packages ;&
+    "${installer_state[checkout_git]}")       checkout_git_repo ;&
+    "${installer_state[compile_move]}")       compile_and_move_binaries ;&
+    "${installer_state[install_service]}")    build_and_install_service_file ;&
+    "${installer_state[enable_service]}")     enable_service_on_boot ;&
+    "${installer_state[start_service]}")      start_service ;&
+    "${installer_state[watch_daemon]}")       watch_daemon_status ;&
+    "${installer_state[ask_prepare]}")        ask_prepare_sn ;&
+    "${installer_state[finished]}")           finish_eqsnode_install ;;
     *) printf "Unknown installer state '%s' found in '%s'. Aborting..." "${current_install_state}" "${installer_session_state_file}"
        exit 1 ;;
   esac

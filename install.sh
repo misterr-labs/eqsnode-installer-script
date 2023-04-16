@@ -20,7 +20,7 @@ main() {
 
   if ! [[ "${#}" -eq "0" ]]; then
     case "$1" in
-       multi-node) multi_node_option_handler "$@" ;;
+       multi-node) multi_node_command_handler "$@" ;;
        *) echo -e "Unsupported option $1\n"
           usage ;;
     esac
@@ -55,7 +55,7 @@ install_dependencies() {
   fi
 }
 
-multi_node_option_handler() {
+multi_node_command_handler() {
   local port_option_found=0
   config['multi_node']=1
 
@@ -71,7 +71,7 @@ multi_node_option_handler() {
 
                                     # ignore preview-auto-magic if port options set, if not show list and exit 0
       -p | --preview-auto-magic)    if [[ "${port_option_found}" -eq 1 ]]; then shift; continue; fi;
-                                    preview_auto_magic_handler ;;
+                                    preview_auto_magic_handler; exit 0 ;;
 
                                     # ignore --manual-ports if auto port options already set
       -m | --manual-ports)          if [[ "${port_option_found}" -eq 1 ]]; then shift 2; continue; fi;
@@ -108,7 +108,6 @@ preview_auto_magic_handler() {
 
   auto_search_available_username
   echo -e "\nIf needed you can alter and set the username manually by:\n\n    \033[0;33mbash install.sh multi-node -u mysnodeuser\033[0m"
-  exit 0
 }
 
 user_option_handler() {
@@ -166,6 +165,7 @@ parse_manual_port_string_and_set_config_if_valid() {
   local params validation_result port_error
 
   # shellcheck disable=SC2207
+  # basically split manual port string on separator ','
   params=( $(echo "$1" | egrep -o -e "[^,]+") )
   port_error=0
 
@@ -179,6 +179,7 @@ parse_manual_port_string_and_set_config_if_valid() {
 
   for key_value in "${params[@]}"
   do
+    # split key_value pair on divider ':'
     read -r port_key port_value <<< "${key_value//:/ }"
     validation_result="$(validate_port "${port_value}")"
 
