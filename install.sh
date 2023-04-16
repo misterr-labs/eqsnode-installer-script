@@ -104,10 +104,10 @@ auto_ports_handler() {
 
 preview_auto_magic_handler() {
   auto_ports_handler
-  echo -e "\n\nYou can set the ports manually by:\n\n    \033[0;33mbash install.sh multi-node -m p2p:9330,rpc:9331,zmq:9332\033[0m\n"
+  echo -e "\nIf needed you can alter and set these ports manually by:\n\n    \033[0;33mbash install.sh multi-node -m p2p:9330,rpc:9331,zmq:9332\033[0m\n"
 
   auto_search_available_username
-  echo -e "\n\nYou can set the username manually by:\n\n    \033[0;33mbash install.sh multi-node -u mysnodeuser\033[0m"
+  echo -e "\nIf needed you can alter and set the username manually by:\n\n    \033[0;33mbash install.sh multi-node -u mysnodeuser\033[0m"
   exit 0
 }
 
