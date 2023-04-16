@@ -22,7 +22,9 @@ main() {
     case "$1" in
        multi-node) multi_node_command_handler "$@" ;;
        *) echo -e "Unsupported option $1\n"
-          usage ;;
+          usage
+          exit 0
+          ;;
     esac
   fi
 
@@ -52,6 +54,15 @@ SPLASHMSG
 install_dependencies() {
   if ! [[ -x "$(command -v netstat)" ]]; then
     sudo apt -y install net-tools
+  fi
+  if ! [[ -x "$(command -v natsort)" ]]; then
+    sudo apt -y install python3-natsort
+  fi
+  if ! [[ -x "$(command -v bc)" ]]; then
+    sudo apt -y install bc
+  fi
+  if ! [[ -x "$(command -v grep)" ]]; then
+    sudo apt -y install grep
   fi
 }
 
@@ -128,7 +139,7 @@ auto_find_ports_and_set_config_if_found() {
       validation_result="$(validate_port "${p2p_port}") $(validate_port "${rpc_port}") $(validate_port "${zmq_rpc_port}")"
 
       # break if all three ports are available and within allowed port range
-      if [[ $(echo "${validation_result}" | grep -o -e 'ok' | wc -l) -eq 3 ]]; then
+      if [[ $(echo "${validation_result}" | grep -o -e 'free_port' | wc -l) -eq 3 ]]; then
         config[p2p_bind_port]="${p2p_port}"
         config[rpc_bind_port]="${rpc_port}"
         config[zmq_rpc_bind_port]="${zmq_rpc_port}"
@@ -190,7 +201,7 @@ parse_manual_port_string_and_set_config_if_valid() {
       'port_used')          printf "%s: %d \t-> \033[0;33mEin use\033[0m\n" "${key_to_config_param[${port_key}]}" "${port_value}"
                             port_error=1 ;;
 
-      'ok')                 printf "%s: %d \t-> OK\n" "${key_to_config_param[${port_key}]}" "${port_value}"
+      'free_port')          printf "%s: %d \t-> OK\n" "${key_to_config_param[${port_key}]}" "${port_value}"
                             config["${key_to_config_param[${port_key}]}"]="${port_value}" ;;
 
       *)                    echo "Unknown port validation result" ; exit 1 ;;
@@ -214,7 +225,7 @@ validate_port() {
   elif [[ "$(sudo netstat -lnp | grep ":${port}" | wc -l)" -gt 0 ]]; then
     echo "port_used"
   else
-    echo "ok"
+    echo "free_port"
   fi
 }
 
@@ -310,6 +321,7 @@ copy_installer_or_continue_session() {
     fi
 
     echo -e "\n\033[1mA previous installation session has been detected with the following config:\033[0m"
+    # Echo install.conf, while skipping #-comment lines
     cat "${installer_home}/install.conf" | egrep "^[^#].*"
     echo ""
 
