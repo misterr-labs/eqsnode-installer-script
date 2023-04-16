@@ -52,6 +52,8 @@ SPLASHMSG
 }
 
 install_dependencies() {
+  echo -e "\n\033[1mChecking basic dependencies...\033[0m"
+
   if ! [[ -x "$(command -v netstat)" ]]; then
     sudo apt -y install net-tools
   fi
