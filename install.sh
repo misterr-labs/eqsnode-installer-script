@@ -35,6 +35,20 @@ main() {
   finish_install
 }
 
+print_splash_screen () {
+  cat <<'SPLASHMSG'
+
+  _____            _ _ _ _          _
+ | ____|__ _ _   _(_) (_) |__  _ __(_) __ _
+ |  _| / _` | | | | | | | '_ \| '__| |/ _` |
+ | |__| (_| | |_| | | | | |_) | |  | | (_| |
+ |_____\__, |\__,_|_|_|_|_.__/|_|  |_|\__,_|
+          |_|
+
+SPLASHMSG
+  echo -e "Service node installer script ${eqnode_installer_version}\n"
+}
+
 install_dependencies() {
   if ! [[ -x "$(command -v netstat)" ]]; then
     sudo apt -y install net-tools
@@ -88,7 +102,6 @@ auto_ports_handler() {
   fi
 }
 
-
 preview_auto_magic_handler() {
   auto_ports_handler
   echo -e "\n\nYou can set the ports manually by:\n\n    \033[0;33mbash install.sh multi-node -m p2p:9330,rpc:9331,zmq:9332\033[0m\n"
@@ -135,7 +148,7 @@ auto_find_ports_and_set_config_if_found() {
 }
 
 manual_ports_handler() {
-  if valid_manual_port_config_format "$1" ; then
+  if valid_manual_port_string_format "$1" ; then
     parse_manual_port_string_and_set_config_if_valid "$1"
   else
     echo -e "Invalid --manual-ports config format '$1'\n"
@@ -187,7 +200,7 @@ parse_manual_port_string_and_set_config_if_valid() {
   fi
 }
 
-valid_manual_port_config_format() {
+valid_manual_port_string_format() {
   [[ "$(echo "$1" | egrep -o -e "^[a-z2]{3}:[0-9]+,[a-z2]{3}:[0-9]+,[a-z2]{3}:[0-9]+$" | egrep -o -e "p2p:[0-9]+" -e "rpc:[0-9]+" -e "zmq:[0-9]+" | wc -l )" -eq 3 ]]
 }
 
@@ -209,20 +222,6 @@ init() {
   installer_home="${homedir}/eqnode_installer"
 }
 
-print_splash_screen () {
-  cat <<'SPLASHMSG'
-
-  _____            _ _ _ _          _
- | ____|__ _ _   _(_) (_) |__  _ __(_) __ _
- |  _| / _` | | | | | | | '_ \| '__| |/ _` |
- | |__| (_| | |_| | | | | |_) | |  | | (_| |
- |_____\__, |\__,_|_|_|_|_.__/|_|  |_|\__,_|
-          |_|
-
-SPLASHMSG
-echo -e "Service node installer script ${eqnode_installer_version}\n"
-}
-
 install_checks () {
   echo -e "\n\033[1mExecuting pre-install checks...\033[0m"
   inspect_time_services
@@ -238,7 +237,7 @@ inspect_time_services () {
       exit 1
     fi
   else
-    echo -e "\033[0;33mWARNING: Clock sync could not be verified.\nPlease check and make sure this is working before continuing!\033[0m\n"
+    echo -e "\033[0;33mWARNING: Clock NTP synchronisation could not be verified.\nPlease check and make sure this is working before continuing!\033[0m\n"
     while true; do
       read -p $'\033[1mAre you sure you want to continue?\e[0m (NOT RECOMMENDED) [Y/N]: ' yn
       yn=${yn:-N}
@@ -250,11 +249,6 @@ inspect_time_services () {
       esac
     done
   fi
-}
-
-setup_running_user () {
-  create_running_user_if_needed
-  sudoers_running_user_nopasswd 'add'
 }
 
 determine_running_user_and_set_config_if_needed() {
@@ -281,6 +275,11 @@ auto_search_available_username() {
     done
 }
 
+setup_running_user () {
+  create_running_user_if_needed
+  sudoers_running_user_nopasswd 'add'
+}
+
 create_running_user_if_needed() {
    # shellcheck disable=SC2154
    if ! id -u "${config[running_user]}" >/dev/null 2>&1; then
@@ -295,10 +294,10 @@ create_running_user_if_needed() {
 
 sudoers_running_user_nopasswd() {
   local action="$1"
-  local sudo_settings
+  local sudo_settings sed_command
   [[ "${action}" = 'add' ]] && sudo_settings='ALL=(ALL) NOPASSWD:ALL' || sudo_settings='ALL=(ALL:ALL) ALL'
   # shellcheck disable=SC2116
-  local sed_command="$(echo "/^${config[running_user]} /{h;s/ .*/ ${sudo_settings}/};\${x;/^$/{s//${config[running_user]} ${sudo_settings}/;H};x}")"
+  sed_command="$(echo "/^${config[running_user]} /{h;s/ .*/ ${sudo_settings}/};\${x;/^$/{s//${config[running_user]} ${sudo_settings}/;H};x}")"
   sudo sed -i "${sed_command}" /etc/sudoers
 }
 

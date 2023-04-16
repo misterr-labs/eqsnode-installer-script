@@ -23,6 +23,7 @@ port_params=
 if [[ "${config[multi_node]}" -eq 1 ]]; then
   port_params="--zmq-rpc-bind-port ${config[zmq_rpc_bind_port]} --p2p-bind-port ${config[p2p_bind_port]} --rpc-bind-port ${config[rpc_bind_port]}"
 fi
+readonly port_params
 
 active_user=${USER:=$(/usr/bin/id -run)}
 readonly active_user
