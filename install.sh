@@ -228,7 +228,7 @@ init() {
 
 install_checks () {
   echo -e "\n\033[1mExecuting pre-install checks...\033[0m"
-  inspect_time_services
+  #inspect_time_services
 }
 
 inspect_time_services () {
@@ -312,20 +312,21 @@ copy_installer_or_continue_session() {
       exit 0
     fi
 
-    echo -e "\n\033[1mA previous installation session has been detected with the following config:\033[0m"
+    echo -e "\n\033[1mA previous installation session for user '${config[running_user]}' has been detected with the following config:\033[0m"
     # Echo install.conf, while skipping #-comment lines
     cat "${installer_home}/install.conf" | egrep "^[^#].*"
     echo ""
 
     while true; do
-      read -p 'Do you want to continue this session? (press ENTER to for: yes) [Y/N]: ' yn
-      yn=${yn:-Y}
+      read -p 'Do you want to continue or overwrite this session? (or press ENTER to abort installation) [C/O]: ' co
+      co=${co:-exit}
 
-      case $yn in
-            [Yy]* ) break;;
-            [Nn]* ) copy_installer_to_install_user_homedir
-                    break;;
-            * ) echo -e "(Please answer Y or N)";;
+      case $co in
+            [Cc]* )       break;;
+            [Oo]* )       copy_installer_to_install_user_homedir
+                          break;;
+            quit | exit)  echo -e "\nInstallation aborted."; exit 0 ;;
+            * )           echo -e "(Please answer C or O)";;
       esac
     done
   else
@@ -334,6 +335,7 @@ copy_installer_or_continue_session() {
 }
 
 copy_installer_to_install_user_homedir() {
+  exit 1
   [[ -d "${installer_home}" ]] && echo -e "\033[1mDeleting old installer files...\033[0m" && sudo rm --recursive --force -- "${installer_home}"
 
   echo -e "\n\033[1mCopying installer to '${installer_home}'...\033[0m"
