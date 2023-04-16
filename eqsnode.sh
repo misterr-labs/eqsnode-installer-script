@@ -196,7 +196,7 @@ watch_daemon_status() {
   local port_params
   port_params="--zmq-rpc-bind-port ${config[zmq_rpc_bind_port]} --p2p-bind-port ${config[p2p_bind_port]} --rpc-bind-port ${config[rpc_bind_port]}"
   while true; do
-    read blocks_done total_blocks perc <<< "$(~/bin/daemon status "${port_params}" | grep -o 'Height:.*' | sed -n 's/^Height: \([0-9]*\)\/\([0-9]*\) (\([0-9.]*\).*/\1 \2 \3/p')"
+    read blocks_done total_blocks perc <<< "$(~/bin/daemon status ${port_params} | grep -o 'Height:.*' | sed -n 's/^Height: \([0-9]*\)\/\([0-9]*\) (\([0-9.]*\).*/\1 \2 \3/p')"
 
     # skip output of odd total number of blocks like 0 or 1
     [[ "${total_blocks}" -lt 1000 ]] && continue
