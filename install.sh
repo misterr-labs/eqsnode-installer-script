@@ -228,7 +228,7 @@ init() {
 
 install_checks () {
   echo -e "\n\033[1mExecuting pre-install checks...\033[0m"
-  #inspect_time_services
+  inspect_time_services
 }
 
 inspect_time_services () {
@@ -335,7 +335,6 @@ copy_installer_or_continue_session() {
 }
 
 copy_installer_to_install_user_homedir() {
-  exit 1
   [[ -d "${installer_home}" ]] && echo -e "\033[1mDeleting old installer files...\033[0m" && sudo rm --recursive --force -- "${installer_home}"
 
   echo -e "\n\033[1mCopying installer to '${installer_home}'...\033[0m"
