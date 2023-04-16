@@ -309,8 +309,12 @@ copy_installer_or_continue_session() {
       exit 0
     fi
 
+    echo -e "\n\033[1mA previous installation session has been detected with the following config:\033[0m"
+    cat "${installer_home}/install.conf" | egrep "^[^#].*"
+    echo ""
+
     while true; do
-      read -p 'A previous installation session has been detected! Do you want to continue this session? (press ENTER to for: yes) [Y/N]: ' yn
+      read -p 'Do you want to continue this session? (press ENTER to for: yes) [Y/N]: ' yn
       yn=${yn:-Y}
 
       case $yn in
