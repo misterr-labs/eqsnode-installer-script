@@ -52,9 +52,9 @@ SPLASHMSG
 }
 
 install_dependencies() {
-  if ! [[ -x "$(command -v netstat)" && -x "$(command -v natsort)" && -x "$(command -v bc)" && -x "$(command -v grep)" && -x "$(command -v getopt)" ]]; then
+  if ! [[ -x "$(command -v netstat)" && -x "$(command -v natsort)" && -x "$(command -v bc)" && -x "$(command -v grep)" && -x "$(command -v getopt)" && -x "$(command -v gawk)" ]]; then
     echo -e "\n\033[1mFixing required dependencies....\033[0m"
-    sudo apt -y install net-tools python3-natsort bc grep util-linux
+    sudo apt -y install net-tools python3-natsort bc grep util-linux gawk
   fi
 }
 
@@ -91,6 +91,28 @@ multi_node_command_handler() {
     auto_ports_handler
   fi
 }
+
+scan_for_concurrent_install_sessons() {
+  local pids pid_exec_path install_session_states home_user
+  pids=( $(sudo ps aux | egrep '[b]ash.*eqsnode.sh' | gawk '{ print $2 }' | grep '[0-9]') )
+  install_session_states=()
+
+  for process_id in "${pids[@]}"
+  do
+    # surpress stderr of pwdx command (in case process is stopped), which would otherwise break the command
+    pid_exec_path="$(sudo pwdx "${process_id}" 2> /dev/null | grep -o '/.*')"
+
+    # empty when process stopped
+    if [[ "${pid_exec_path}" != "" ]] && [[ -f "${pid_exec_path}/.installsessionstate" ]]; then
+      home_user="$(echo "${pid_exec_path}" | grep -oP '/home/\K[^/]*')"
+      install_session_states+=("${home_user};${process_id};$(cat "${pid_exec_path}/.installsessionstate");${pid_exec_path}")
+    fi
+  done
+
+  # shellcheck disable=SC2086
+  echo ${install_session_states[*]}
+}
+
 
 auto_ports_handler() {
   local auto_find_result
@@ -280,8 +302,23 @@ auto_search_available_username() {
 }
 
 setup_running_user () {
+  validate_running_user
   create_running_user_if_needed
   sudoers_running_user_nopasswd 'add'
+}
+
+validate_running_user() {
+  echo -e "\n\033[1mValidating user '${config[running_user]}'...\033[0m"
+
+  if running_user_has_acive_daemon; then
+    echo -e "\n\033[0;33mSAFETY POLICY VIOLATION: User '${config[running_user]}' is already running an active service node daemon. Please install with a different user!\033[0m"
+    echo -e "\nInstallation aborted."
+    exit 1
+  fi
+}
+
+running_user_has_acive_daemon() {
+   [[ "$(sudo ps aux | egrep '[b]in/daemon.*--service-node' | gawk '{ print $1 }' | natsort | uniq | grep -o "^${config[running_user]}$" | wc -l)" -gt 0 ]]
 }
 
 create_running_user_if_needed() {
