@@ -1,4 +1,4 @@
-eqnode_installer_version='v3.1.0'
+eqnode_installer_version='v3.1.1'
 readonly eqnode_installer_version
 
 installer_session_state_file="${script_basedir}/.installsessionstate"

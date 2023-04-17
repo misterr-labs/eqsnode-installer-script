@@ -92,7 +92,7 @@ multi_node_command_handler() {
   fi
 }
 
-scan_for_concurrent_install_sessons() {
+scan_for_concurrent_install_sessions() {
   local pids pid_exec_path install_session_states home_user
   pids=( $(sudo ps aux | egrep '[b]ash.*eqsnode.sh' | gawk '{ print $2 }' | grep '[0-9]') )
   install_session_states=()
@@ -312,6 +312,10 @@ validate_running_user() {
 
   if running_user_has_acive_daemon; then
     echo -e "\n\033[0;33mSAFETY POLICY VIOLATION: User '${config[running_user]}' is already running an active service node daemon. Please install with a different user!\033[0m"
+
+    if [[ "${config[multi_node]}" -eq 0 ]]; then
+      echo -e "\nIn case you want to install a second service node on this VPS or server, please use the following command instead:\n\n\033[0;33m    bash install.sh multi-node\033[0m"
+    fi
     echo -e "\nInstallation aborted."
     exit 1
   fi
