@@ -19,11 +19,11 @@
 ## Multi service node installation (one VPS or server)
 #### Note: run root user (or sudo user)
 
-`bash install.sh --user auto --ports auto`
+`bash install.sh -m`
 -
-or shorthand
+or
 -
-`bash install.sh --multi-node`
+`bash install.sh --user auto`
 -
 ### IMPORTANT: 
 #### Do not start another multi-node install until the first installation session at least progressed till the point where it starts downloading the blockchain. This way the auto-magic port and username functionality works as expected! If you don't like waiting, please have a look at the advanced features below to set the ports and username manually. However, please avoid overloading the server or VPS by running too many installation sessions at the same time.
