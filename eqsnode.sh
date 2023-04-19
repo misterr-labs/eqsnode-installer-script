@@ -1,7 +1,6 @@
 #! /bin/env bash
 # v1.0 developed by GreggyGB
-# v2.0 by Mister R
-# v3.0 by Mister R
+# v2.0-v4.0 by Mister R
 
 set -o errexit
 set -o nounset
@@ -99,8 +98,6 @@ install_required_packages() {
   echo -e "\n\033[1mInstalling tool packages...\033[0m"
   sudo apt -y install wget unzip git
   sudo apt update
-#  ln -s /usr/local/lib/python3.8/dist-packages/cmake /usr/bin/cmake
-#https://apt.kitware.com/
 
   sudo apt-get -y install bc build-essential cmake pkg-config libboost-all-dev libssl-dev libzmq3-dev libunbound-dev libsodium-dev libunwind8-dev liblzma-dev libreadline6-dev libldns-dev libexpat1-dev doxygen graphviz libpgm-dev qttools5-dev-tools libhidapi-dev libusb-dev libprotobuf-dev protobuf-compiler
 }
@@ -315,13 +312,13 @@ Commands:
   log                 View service log
 
 Options:
-  -?  -h  --help      Show this help text
+  -h  --help          Show this help text
 
 USAGEMSG
 }
 
 usage_help_is_needed() {
-  [[ ( "${#}" -ge "1" && ( "$1" = '-h' || "$1" = '--help' || "$1" = '-?' )) || "${#}" -eq "0" ]]
+  [[ ( "${#}" -ge "1" && ( "$1" = '-h' || "$1" = '--help' )) || "${#}" -eq "0" ]]
 }
 
 finally() {

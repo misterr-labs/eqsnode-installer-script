@@ -31,8 +31,6 @@ main() {
   print_splash_screen
   install_dependencies
   process_command_line_args "$@"
-#  echo "${config[*]}"
-#  exit 0
   init
   install_checks
   setup_running_user
@@ -316,15 +314,11 @@ auto_search_available_username() {
 init() {
   [[ "${config[running_user]}" = "root" ]] && homedir='/root' || homedir="/home/${config[running_user]}"
   installer_home="${homedir}/eqnode_installer"
-
-#  if ! [[ -f ~/.screenrc ]]; then
-#    cp screenrc.conf ~/.screenrc
-#  fi
 }
 
 install_checks () {
   echo -e "\n\033[1mExecuting pre-install checks...\033[0m"
-#  inspect_time_services
+  inspect_time_services
   upgrade_cmake_if_needed
 }
 
