@@ -1,4 +1,4 @@
-eqnode_installer_version='v4.0.0'
+eqnode_installer_version='v4.0.1'
 readonly eqnode_installer_version
 
 installer_session_state_file="${script_basedir}/.installsessionstate"
@@ -67,6 +67,10 @@ default_ports_configured() {
     "${config[rpc_bind_port]}" -eq "${default_service_node_ports[rpc_bind_port]}" &&
     "${config[zmq_rpc_bind_port]}" -eq "${default_service_node_ports[zmq_rpc_bind_port]}"
   ]]
+}
+
+get_latest_equilibria_version_number() {
+  git ls-remote --tags "${config[git_repository]}" | grep -o 'v.*' | sort -V | tail -1
 }
 
 load_config

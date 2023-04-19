@@ -235,19 +235,21 @@ watch_daemon_status() {
 }
 
 ask_prepare_sn() {
-  while true; do
-    read -p $'\033[1mDo you want to prepare the Service Node (prepare_sn)?\e[0m (press ENTER for: Yes) [Y/N]: ' yn
-    yn=${yn:-Y}
+  if [[ "${config[skip_prepare_sn]}" -eq 0 ]]; then
+    while true; do
+      read -p $'\033[1mDo you want to prepare the Service Node (prepare_sn)?\e[0m (press ENTER for: Yes) [Y/N]: ' yn
+      yn=${yn:-Y}
 
-      case $yn in
-            [Yy]* ) prepare_sn
-                    break;;
-            [Nn]* )
-                    echo -e "Note: you can prepare the Service Node by running the following command manually:\n\tbash ${script_basedir}/eqsnode.sh prepare_sn"
-                    exit 1;;
-            * ) echo -e "(Please answer Y or N)";;
-      esac
-  done
+        case $yn in
+              [Yy]* ) prepare_sn
+                      break;;
+              [Nn]* )
+                      echo -e "Note: you can prepare the Service Node by running the following command manually:\n\tbash ${script_basedir}/eqsnode.sh prepare_sn"
+                      exit 1;;
+              * ) echo -e "(Please answer Y or N)";;
+        esac
+    done
+  fi
 }
 
 finish_eqsnode_install() {

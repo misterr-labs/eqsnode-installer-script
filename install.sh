@@ -31,7 +31,6 @@ main() {
   print_splash_screen
   install_dependencies
   process_command_line_args "$@"
-
 #  echo "${config[*]}"
 #  exit 0
   init
@@ -101,12 +100,13 @@ set_config_and_execute_info_commands() {
   [[ "${command_options_set[multi_node]}" -eq 1 && "${command_options_set[user]}" -eq 0 ]] && user_option_handler "auto"
   [[ "${command_options_set[user]}" -eq 1 ]] && user_option_handler "${user_option_value}"
   [[ "${command_options_set[skip_prepare_sn]}" -eq 1 ]] && config[skip_prepare_sn]=1
-  [[ "${command_options_set[version]}" -eq 1 ]] && config[install_version]="${version_option_value}"
+  [[ "${command_options_set[version]}" -eq 1 ]] && version_option_handler "${version_option_value}"
 
   # process more complex set config
   [[ "${command_options_set[ports]}" -eq 1 ]] && ports_option_handler "${ports_option_value}"
 
-  # set default port option if none is set
+  # set default options if none is set
+  [[ "${command_options_set[version]}" -eq 0 ]] && version_option_handler "${config[install_version]}"
   [[ "${command_options_set[ports]}" -eq 0 ]] && ports_option_handler "auto"
 
   # necessary return 0
@@ -150,6 +150,18 @@ generate_set_options_string() {
   echo "${result}"
 }
 
+version_option_handler() {
+  if [[ "$1" = "auto" ]]; then
+    echo -e "\n\033[1mAuto-detecting latest Equilibria version...\033[0m"
+    config[install_version]="$(get_latest_equilibria_version_number)"
+    echo -e "Detected version -> ${config[install_version]}"
+  else
+    config[install_version]="$1"
+    echo -e "\n\033[1mInstalling manually set Equilibria version:\033[0m"
+    echo -e "${config[install_version]}"
+  fi
+}
+
 auto_ports_option_handler() {
   echo -e "\n\033[1mAuto-detecting available ports...\033[0m"
   auto_find_ports_and_set_config_if_found
@@ -162,11 +174,15 @@ auto_ports_option_handler() {
 }
 
 inspect_auto_magic_option_handler() {
+  version_option_handler "auto"
   ports_option_handler "auto"
-  echo -e "\nIf needed you can alter and set these ports manually by:\n\n    \033[0;33mbash install.sh -p p2p:9330,rpc:9331,zmq:9332\033[0m\n"
-
   auto_search_available_username
-  echo -e "\nIf needed you can alter and set the username manually by:\n\n    \033[0;33mbash install.sh -u mysnodeuser\033[0m"
+
+  echo -e "\nIf needed you can alter these settings manually by one of the following commands (or combination):\n\033[0;33m"
+  echo -e "    bash install.sh -v ${config[install_version]}"
+  echo -e "    bash install.sh -p p2p:9330,rpc:9331,zmq:9332"
+  echo -e "    bash install.sh -u mysnodeuser\033[0m\n"
+
 }
 
 auto_find_ports_and_set_config_if_found() {
@@ -469,23 +485,23 @@ usage() {
 bash $0 [OPTIONS...]
 
 Options:
-  -m  --multi-node            Shorthand for --user auto'. Setting --user will override this option
-  -i  --inspect-auto-magic    Display preview of all automatically set port, user and Equilibria version
-  -p  --ports [auto|config]   Manual port configuration; 'p2p:<port>,rpc:<port>,zmq:<port>'
-                              Example:  --ports p2p:9330,rpc:9331,zmq:9332
+  -m  --multi-node              Shorthand for --user auto'. Setting --user will override this option
+  -i  --inspect-auto-magic      Display preview of all automatically set port, user and Equilibria version
+  -p  --ports [auto|config]     Manual port configuration; 'p2p:<port>,rpc:<port>,zmq:<port>'
+                                Example:  --ports p2p:9330,rpc:9331,zmq:9332
 
-                              Auto detect ports; This requires ALL other service nodes to be active!
-                              Example:  --ports auto
+                                Auto detect ports; This requires ALL other service nodes to be active!
+                                Example:  --ports auto
 
-  -u --user [auto|name]       Set username that will run the service node or 'auto' for autodetect
-                              Example:  --user snode2
-                                        --user auto
+  -u --user [auto|name]         Set username that will run the service node or 'auto' for autodetect
+                                Example:  --user snode2
+                                          --user auto
 
-  -v --version [tag]          Set Equilibria version with format 'v0.0.0'
-  --skip-prepare-sn           Skip the auto start of the prepare_sn command at the end
-                              of the install
+  -v --version [auto|version]   Set Equilibria version with format 'v0.0.0'. Use 'auto' to get latest.
+  --skip-prepare-sn             Skip the auto start of the prepare_sn command at the end
+                                of the install
 
-  -h  --help                  Show this help text
+  -h  --help                    Show this help text
 
 USAGEMSG
 }
