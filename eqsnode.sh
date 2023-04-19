@@ -1,7 +1,6 @@
 #! /bin/env bash
 # v1.0 developed by GreggyGB
-# v2.0 by Mister R
-# v3.0 by Mister R
+# v2.0-v4.0 by Mister R
 
 set -o errexit
 set -o nounset
@@ -14,14 +13,12 @@ readonly script_basedir install_root_bin_dir install_root_service
 
 source "${script_basedir}/common.sh"
 
-service_name=
-service_file=
-[[ "${config[multi_node]}" -eq 1 ]] && service_name="eqnode_${config[running_user]}.service" || service_name="eqnode.service"
+service_name="eqnode_${config[running_user]}.service"
 service_file="${install_root_service}/${service_name}"
 readonly service_name service_file
 
 port_params=
-if [[ "${config[multi_node]}" -eq 1 ]]; then
+if ! default_ports_configured; then
   port_params="--zmq-rpc-bind-port ${config[zmq_rpc_bind_port]} --p2p-bind-port ${config[p2p_bind_port]} --rpc-bind-port ${config[rpc_bind_port]}"
 fi
 readonly port_params
@@ -43,6 +40,7 @@ main() {
     status )        status ;;
     log )           log ;;
     update )        update ;;
+    fakerun )       sleep 300 ;;
 #    fork_update ) fork_update ;;
     print_sn_key )  print_sn_key ;;
     * ) usage
@@ -100,6 +98,7 @@ install_required_packages() {
   echo -e "\n\033[1mInstalling tool packages...\033[0m"
   sudo apt -y install wget unzip git
   sudo apt update
+
   sudo apt-get -y install bc build-essential cmake pkg-config libboost-all-dev libssl-dev libzmq3-dev libunbound-dev libsodium-dev libunwind8-dev liblzma-dev libreadline6-dev libldns-dev libexpat1-dev doxygen graphviz libpgm-dev qttools5-dev-tools libhidapi-dev libusb-dev libprotobuf-dev protobuf-compiler
 }
 
@@ -234,19 +233,21 @@ watch_daemon_status() {
 }
 
 ask_prepare_sn() {
-  while true; do
-    read -p $'\033[1mDo you want to prepare the Service Node (prepare_sn)?\e[0m (press ENTER for: Yes) [Y/N]: ' yn
-    yn=${yn:-Y}
+  if [[ "${config[skip_prepare_sn]}" -eq 0 ]]; then
+    while true; do
+      read -p $'\033[1mDo you want to prepare the Service Node (prepare_sn)?\e[0m (press ENTER for: Yes) [Y/N]: ' yn
+      yn=${yn:-Y}
 
-      case $yn in
-            [Yy]* ) prepare_sn
-                    break;;
-            [Nn]* )
-                    echo -e "Note: you can prepare the Service Node by running the following command manually:\n\tbash ${script_basedir}/eqsnode.sh prepare_sn"
-                    exit 1;;
-            * ) echo -e "(Please answer Y or N)";;
-      esac
-  done
+        case $yn in
+              [Yy]* ) prepare_sn
+                      break;;
+              [Nn]* )
+                      echo -e "Note: you can prepare the Service Node by running the following command manually:\n\tbash ${script_basedir}/eqsnode.sh prepare_sn"
+                      exit 1;;
+              * ) echo -e "(Please answer Y or N)";;
+        esac
+    done
+  fi
 }
 
 finish_eqsnode_install() {
@@ -311,13 +312,13 @@ Commands:
   log                 View service log
 
 Options:
-  -?  -h  --help      Show this help text
+  -h  --help          Show this help text
 
 USAGEMSG
 }
 
 usage_help_is_needed() {
-  [[ ( "${#}" -ge "1" && ( "$1" = '-h' || "$1" = '--help' || "$1" = '-?' )) || "${#}" -eq "0" ]]
+  [[ ( "${#}" -ge "1" && ( "$1" = '-h' || "$1" = '--help' )) || "${#}" -eq "0" ]]
 }
 
 finally() {

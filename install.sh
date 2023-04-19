@@ -12,23 +12,25 @@ source "${script_basedir}/common.sh"
 
 installer_home=
 auto_find_result=
-forced_running_user=0
+
+typeset -A command_options_set
+command_options_set=(
+  [help]=0
+  [inspect_auto_magic]=0
+  [multi_node]=0
+  [ports]=0
+  [skip_prepare_sn]=0
+  [user]=0
+  [version]=0
+)
+ports_option_value=
+user_option_value=
+version_option_value=
 
 main() {
   print_splash_screen
   install_dependencies
-
-  if ! [[ "${#}" -eq "0" ]]; then
-    case "$1" in
-       multi-node) multi_node_command_handler "$@" ;;
-       *) echo -e "Unsupported option $1\n"
-          usage
-          exit 0
-          ;;
-    esac
-  fi
-
-  determine_running_user_and_set_config_if_needed
+  process_command_line_args "$@"
   init
   install_checks
   setup_running_user
@@ -58,65 +60,106 @@ install_dependencies() {
   fi
 }
 
-multi_node_command_handler() {
-  local port_option_found=0
-  config['multi_node']=1
+process_command_line_args() {
+  parse_command_line_args "$@"
+  validate_parsed_command_line_args
+  set_config_and_execute_info_commands
+}
 
-  args="$(getopt -a -n multi-node -o "pam:u:" --long preview-auto-magic,auto-ports,manual-ports:,user: -- "$@")"
+parse_command_line_args() {
+  args="$(getopt -a -n installer -o "himp:u:v:" --long help,inspect-auto-magic,multi-node,auto-ports,skip-prepare-sn,ports:,user:,version: -- "$@")"
   eval set -- "${args}"
 
   while :
   do
     case "$1" in
-                                    # ignore --auto-ports if manual port options already set
-      -a | --auto-ports)            if [[ "${port_option_found}" -eq 1 ]]; then shift; continue; fi;
-                                    port_option_found=1 ; auto_ports_handler; shift ;;
-
-                                    # ignore preview-auto-magic if port options set, if not show list and exit 0
-      -p | --preview-auto-magic)    if [[ "${port_option_found}" -eq 1 ]]; then shift; continue; fi;
-                                    preview_auto_magic_handler; exit 0 ;;
-
-                                    # ignore --manual-ports if auto port options already set
-      -m | --manual-ports)          if [[ "${port_option_found}" -eq 1 ]]; then shift 2; continue; fi;
-                                    port_option_found=1 ; manual_ports_handler "$2" ; shift 2 ;;
-
-                                    # option --user can be used in combination with both --auto-parts or --manual-ports option
-      -u | --user)                  user_option_handler "$2"; shift 2 ;;
-      --)                           shift; break ;;
-      *)                            echo "Unexpected multi_node option" ; exit 1 ;;
+      -h | --help)                  command_options_set[help]=1 ; shift ;;
+      -i | --inspect-auto-magic)    command_options_set[inspect_auto_magic]=1; shift; ;;
+      -m | --multi-node)            command_options_set[multi_node]=1; shift ;;
+      -p | --ports)                 command_options_set[ports]=1; ports_option_value="$2"; shift 2 ;;
+      --skip-prepare-sn)            command_options_set[skip_prepare_sn]=1 ; shift ;;
+      -u | --user)                  command_options_set[user]=1; user_option_value="$2"; shift 2 ;;
+      -v | --version)               command_options_set[version]=1; version_option_value="$2"; shift 2 ;;
+      --)                           shift ; break ;;
+      *)                            echo "Unexpected option: $1" ;
+                                    usage
+                                    exit 0 ;;
     esac
   done
-  # if no port option is specified by the user, use default '--auto-ports'
-  if [[ "${port_option_found}" -eq 0 ]]; then
-    auto_ports_handler
+}
+
+set_config_and_execute_info_commands() {
+
+  # info commands, exit 0 must be first listed options in this function
+  [[ "${command_options_set[inspect_auto_magic]}" -eq 1 ]] && inspect_auto_magic_option_handler && exit 0
+  [[ "${command_options_set[help]}" -eq 1 ]] && usage && exit 0
+
+  # direct set config
+  [[ "${command_options_set[multi_node]}" -eq 1 && "${command_options_set[user]}" -eq 0 ]] && user_option_handler "auto"
+  [[ "${command_options_set[user]}" -eq 1 ]] && user_option_handler "${user_option_value}"
+  [[ "${command_options_set[skip_prepare_sn]}" -eq 1 ]] && config[skip_prepare_sn]=1
+  [[ "${command_options_set[version]}" -eq 1 ]] && version_option_handler "${version_option_value}"
+
+  # process more complex set config
+  [[ "${command_options_set[ports]}" -eq 1 ]] && ports_option_handler "${ports_option_value}"
+
+  # set default options if none is set
+  [[ "${command_options_set[version]}" -eq 0 ]] && version_option_handler "${config[install_version]}"
+  [[ "${command_options_set[ports]}" -eq 0 ]] && ports_option_handler "auto"
+
+  # necessary return 0
+  return 0
+}
+
+validate_parsed_command_line_args() {
+  local friendly_option_groupings group_option_count command_options_set_string unique_count valid_option_combi_found
+  valid_option_combi_found=0
+
+  friendly_option_groupings=(
+    "<no_options_set>"
+    "multi_node ports user skip_prepare_sn version"
+    "inspect_auto_magic"
+    "help"
+  )
+  command_options_set_string="$(generate_set_options_string)"
+  [[ "${command_options_set_string}" = '' ]] && command_options_set_string='<no_options_set>'
+
+  for option_string in "${friendly_option_groupings[@]}"
+  do
+    group_option_count="$(echo "${option_string}" | egrep -o '[^ ]+' | wc -l)"
+    unique_count="$(echo "${option_string} ${command_options_set_string}" | egrep -o '[^ ]+' | natsort | uniq | wc -l)"
+
+    [[ "${unique_count}" -le "${group_option_count}" ]] && valid_option_combi_found=1 && break
+  done
+
+  if [[ "${valid_option_combi_found}" -eq 0 && "${command_options_set_string}" != '<no_options_set>' ]]; then
+    echo -e "\033[0;33merror: invalid parameter combination\033[0m\n"
+    usage
+    exit 1
   fi
 }
 
-scan_for_concurrent_install_sessions() {
-  local pids pid_exec_path install_session_states home_user
-  pids=( $(sudo ps aux | egrep '[b]ash.*eqsnode.sh' | gawk '{ print $2 }' | grep '[0-9]') )
-  install_session_states=()
-
-  for process_id in "${pids[@]}"
+generate_set_options_string() {
+  local result=''
+  for option in "${!command_options_set[@]}"
   do
-    # surpress stderr of pwdx command (in case process is stopped), which would otherwise break the command
-    pid_exec_path="$(sudo pwdx "${process_id}" 2> /dev/null | grep -o '/.*')"
-
-    # empty when process stopped
-    if [[ "${pid_exec_path}" != "" ]] && [[ -f "${pid_exec_path}/.installsessionstate" ]]; then
-      home_user="$(echo "${pid_exec_path}" | grep -oP '/home/\K[^/]*')"
-      install_session_states+=("${home_user};${process_id};$(cat "${pid_exec_path}/.installsessionstate");${pid_exec_path}")
-    fi
+    [[ "${command_options_set[$option]}" -eq 1 ]] && result+="${option} "
   done
-
-  # shellcheck disable=SC2086
-  echo ${install_session_states[*]}
+  echo "${result}"
 }
 
+version_option_handler() {
+  if [[ "$1" = "auto" ]]; then
+    echo -e "\n\033[1mAuto-detecting latest Equilibria version...\033[0m"
+    config[install_version]="$(get_latest_equilibria_version_number)"
+  else
+    config[install_version]="$1"
+    echo -e "\n\033[1mInstalling manually set Equilibria version:\033[0m"
+  fi
+  echo -e "Version -> ${config[install_version]}"
+}
 
-auto_ports_handler() {
-  local auto_find_result
-
+auto_ports_option_handler() {
   echo -e "\n\033[1mAuto-detecting available ports...\033[0m"
   auto_find_ports_and_set_config_if_found
 
@@ -127,18 +170,16 @@ auto_ports_handler() {
   fi
 }
 
-preview_auto_magic_handler() {
-  auto_ports_handler
-  echo -e "\nIf needed you can alter and set these ports manually by:\n\n    \033[0;33mbash install.sh multi-node -m p2p:9330,rpc:9331,zmq:9332\033[0m\n"
+inspect_auto_magic_option_handler() {
+  version_option_handler "auto"
+  ports_option_handler "auto"
+  user_option_handler "auto"
 
-  auto_search_available_username
-  echo -e "\nIf needed you can alter and set the username manually by:\n\n    \033[0;33mbash install.sh multi-node -u mysnodeuser\033[0m"
-}
+  echo -e "\nIf needed you can alter these settings manually by one of the following commands (or combination):\n\033[0;33m"
+  echo -e "    bash install.sh -v ${config[install_version]}"
+  echo -e "    bash install.sh -p p2p:9330,rpc:9331,zmq:9332"
+  echo -e "    bash install.sh -u mysnodeuser\033[0m\n"
 
-user_option_handler() {
-  local username="$1"
-  forced_running_user=1
-  config[running_user]="${username}"
 }
 
 auto_find_ports_and_set_config_if_found() {
@@ -171,13 +212,27 @@ auto_find_ports_and_set_config_if_found() {
     done
 }
 
-manual_ports_handler() {
-  if valid_manual_port_string_format "$1" ; then
+user_option_handler() {
+  if [[ "$1" = "auto" ]]; then
+    auto_search_available_username
+  else
+    config[running_user]="$1"
+  fi
+}
+
+ports_option_handler() {
+  if [[ "$1" = "auto" ]]; then
+    auto_ports_option_handler
+  elif valid_manual_port_string_format "$1" ; then
     parse_manual_port_string_and_set_config_if_valid "$1"
   else
-    echo -e "Invalid --manual-ports config format '$1'\n"
+    echo -e "Invalid --ports config format '$1'\n"
     usage
   fi
+}
+
+valid_manual_port_string_format() {
+  [[ "$(echo "$1" | egrep -o -e "^[a-z2]{3}:[0-9]+,[a-z2]{3}:[0-9]+,[a-z2]{3}:[0-9]+$" | egrep -o -e "p2p:[0-9]+" -e "rpc:[0-9]+" -e "zmq:[0-9]+" | wc -l )" -eq 3 ]]
 }
 
 parse_manual_port_string_and_set_config_if_valid() {
@@ -226,10 +281,6 @@ parse_manual_port_string_and_set_config_if_valid() {
   fi
 }
 
-valid_manual_port_string_format() {
-  [[ "$(echo "$1" | egrep -o -e "^[a-z2]{3}:[0-9]+,[a-z2]{3}:[0-9]+,[a-z2]{3}:[0-9]+$" | egrep -o -e "p2p:[0-9]+" -e "rpc:[0-9]+" -e "zmq:[0-9]+" | wc -l )" -eq 3 ]]
-}
-
 validate_port() {
   local port="$1"
 
@@ -243,6 +294,23 @@ validate_port() {
   fi
 }
 
+auto_search_available_username() {
+    echo -e "\n\033[1mAuto-searching for an unused username to run the service node...\033[0m"
+    local username_base counter
+    username_base="${config[running_user]}"
+    counter=1
+    candidate_username=${username_base}
+    while true; do
+      if ! id -u "${candidate_username}" >/dev/null 2>&1; then
+        echo "Detected unused username -> ${candidate_username}"
+        config[running_user]="${candidate_username}"
+        break
+      fi
+      counter=$((counter + 1))
+      candidate_username="${username_base}${counter}"
+    done
+}
+
 init() {
   [[ "${config[running_user]}" = "root" ]] && homedir='/root' || homedir="/home/${config[running_user]}"
   installer_home="${homedir}/eqnode_installer"
@@ -251,6 +319,7 @@ init() {
 install_checks () {
   echo -e "\n\033[1mExecuting pre-install checks...\033[0m"
   inspect_time_services
+  upgrade_cmake_if_needed
 }
 
 inspect_time_services () {
@@ -277,28 +346,43 @@ inspect_time_services () {
   fi
 }
 
-determine_running_user_and_set_config_if_needed() {
-  # if not in multi-node mode and not --username set, auto-scan for an available username for running user
-  if [[ "${config[multi_node]}" -eq 1 ]] && [[ "${forced_running_user}" -eq 0 ]]; then
-    auto_search_available_username
+upgrade_cmake_if_needed() {
+  local current_cmake_version distro_name distro_version_codename
+
+  current_cmake_version="$(cmake --version | awk 'NR==1 { print $3  }')"
+  distro_name="$(lsb_release -a 2> /dev/null | grep 'Distributor ID:' | awk '{ print tolower($3) }')"
+  distro_version_codename="$(lsb_release -a 2>/dev/null | grep 'Codename:' | awk '{ print $2 }')"
+
+  if [[ "${distro_name}" = "ubuntu" && $(version2num "${current_cmake_version}") -lt $(version2num "3.18") ]]; then
+    echo -e "\n\033[1mUpgrading cmake (${current_cmake_version}) to newest version...\033[0m"
+    sudo apt-get update
+    sudo apt-get install gpg wget
+    wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | sudo tee /usr/share/keyrings/kitware-archive-keyring.gpg >/dev/null
+    echo "deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ ${distro_version_codename} main" | sudo tee /etc/apt/sources.list.d/kitware.list >/dev/null
+    sudo apt-get update
+    sudo apt-get install cmake
   fi
 }
 
-auto_search_available_username() {
-    echo -e "\n\033[1mAuto-searching for an unused username to run the service node...\033[0m"
-    local username_base counter
-    username_base="${config[running_user]}"
-    counter=1
-    candidate_username=${username_base}
-    while true; do
-      if ! id -u "${candidate_username}" >/dev/null 2>&1; then
-        echo "Detected unused username -> ${candidate_username}"
-        config[running_user]="${candidate_username}"
-        break
-      fi
-      counter=$((counter + 1))
-      candidate_username="${username_base}${counter}"
-    done
+scan_for_concurrent_install_sessions() {
+  local pids pid_exec_path install_session_states home_user
+  pids=( $(sudo ps aux | egrep '[b]ash.*eqsnode.sh' | gawk '{ print $2 }' | grep '[0-9]') )
+  install_session_states=()
+
+  for process_id in "${pids[@]}"
+  do
+    # surpress stderr of pwdx command (in case process is stopped), which would otherwise break the command
+    pid_exec_path="$(sudo pwdx "${process_id}" 2> /dev/null | grep -o '/.*')"
+
+    # empty when process stopped
+    if [[ "${pid_exec_path}" != "" ]] && [[ -f "${pid_exec_path}/.installsessionstate" ]]; then
+      home_user="$(echo "${pid_exec_path}" | grep -oP '/home/\K[^/]*')"
+      install_session_states+=("${home_user};${process_id};$(cat "${pid_exec_path}/.installsessionstate");${pid_exec_path}")
+    fi
+  done
+
+  # shellcheck disable=SC2086
+  echo ${install_session_states[*]}
 }
 
 setup_running_user () {
@@ -310,18 +394,15 @@ setup_running_user () {
 validate_running_user() {
   echo -e "\n\033[1mValidating user '${config[running_user]}'...\033[0m"
 
-  if running_user_has_acive_daemon; then
+  if running_user_has_active_daemon; then
     echo -e "\n\033[0;33mSAFETY POLICY VIOLATION: User '${config[running_user]}' is already running an active service node daemon. Please install with a different user!\033[0m"
-
-    if [[ "${config[multi_node]}" -eq 0 ]]; then
-      echo -e "\nIn case you want to install a second service node on this VPS or server, please use the following command instead:\n\n\033[0;33m    bash install.sh multi-node\033[0m"
-    fi
+    echo -e "\nIn case you want to install a second service node on this VPS or server, please use the following command instead:\n\n\033[0;33m    bash install.sh -m\033[0m"
     echo -e "\nInstallation aborted."
     exit 1
   fi
 }
 
-running_user_has_acive_daemon() {
+running_user_has_active_daemon() {
    [[ "$(sudo ps aux | egrep '[b]in/daemon.*--service-node' | gawk '{ print $1 }' | natsort | uniq | grep -o "^${config[running_user]}$" | wc -l)" -gt 0 ]]
 }
 
@@ -390,7 +471,6 @@ write_install_config_to_install_user_homedir() {
   install_file_user_home="${installer_home}/install.conf"
 
   echo -e "\n\033[1mGenerating new install.conf in '${install_file_user_home}'...\033[0m"
-
   sudo touch "${install_file_user_home}"
 
   for key in "${!config[@]}"
@@ -400,6 +480,7 @@ write_install_config_to_install_user_homedir() {
 }
 
 install_with_running_user() {
+#  create_install_session_screen_lifeline
   sudo -H -u "${config[running_user]}" bash -c 'cd ~/eqnode_installer/ && bash eqsnode.sh install'
 }
 
@@ -412,28 +493,29 @@ finish_install() {
 
 usage() {
   cat <<USAGEMSG
-bash $0 [COMMAND...] [OPTIONS...]
 
-Commands:
-  <empty>                   Install a single service node with default ports
-  multi-node                Installs an additional service node on the same VPS or server
-
-Multi-node command options:
-  -a  --auto-ports          Default; Automatically assign non-default ports
-  -p  --preview-auto-magic  Display preview of '--auto-ports' and auto-search of username
-  --manual-ports [config]   Format config (without spaces) 'p2p:<port>,rpc:<port>,zmq:<port>'
-                            Example: --manual-ports p2p:9330,rpc:9331,zmq:9332
-
-  -u --user [name]          Set user that will run the service node
-                            Example: --user snode2
+bash $0 [OPTIONS...]
 
 Options:
-  -?  -h  --help                Show this help text
-USAGEMSG
-}
+  -m  --multi-node              Shorthand for --user auto'. Setting --user will override this option
+  -i  --inspect-auto-magic      Display preview of all automatically set port, user and Equilibria version
+  -p  --ports [auto|config]     Manual port configuration; 'p2p:<port>,rpc:<port>,zmq:<port>'
+                                Example:  --ports p2p:9330,rpc:9331,zmq:9332
 
-usage_help_is_needed() {
-  [[ ( "${#}" -ge "1" && ( "$1" = '-h' || "$1" = '--help' || "$1" = '-?' )) ]]
+                                Auto detect ports; This requires ALL other service nodes to be active!
+                                Example:  --ports auto
+
+  -u --user [auto|name]         Set username that will run the service node or 'auto' for autodetect
+                                Example:  --user snode2
+                                          --user auto
+
+  -v --version [auto|version]   Set Equilibria version with format 'v0.0.0'. Use 'auto' to get latest.
+  --skip-prepare-sn             Skip the auto start of the prepare_sn command at the end
+                                of the install
+
+  -h  --help                    Show this help text
+
+USAGEMSG
 }
 
 finally() {
@@ -442,11 +524,6 @@ finally() {
   exit ${result}
 }
 trap finally EXIT ERR INT
-
-if usage_help_is_needed "$@"; then
-  usage
-  exit 0
-fi
 
 main "${@}"
 exit 0

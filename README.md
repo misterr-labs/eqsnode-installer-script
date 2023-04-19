@@ -19,18 +19,22 @@
 ## Multi service node installation (one VPS or server)
 #### Note: run root user (or sudo user)
 
-`bash install.sh multi-node`
+`bash install.sh -m`
+-
+or
+-
+`bash install.sh --user auto`
 -
 ### IMPORTANT: 
 #### Do not start another multi-node install until the first installation session at least progressed till the point where it starts downloading the blockchain. This way the auto-magic port and username functionality works as expected! If you don't like waiting, please have a look at the advanced features below to set the ports and username manually. However, please avoid overloading the server or VPS by running too many installation sessions at the same time.
 <br />
 
-### Preview auto-magic (not a required step)
-`bash install.sh multi-node --preview-auto-magic`
+### Inspect auto-magic (not a required step)
+`bash install.sh --inspect-auto-magic`
 -
 #### Or use the shorthand version
 
-`bash install.sh multi-node -p`
+`bash install.sh -i`
 <br />
 
 ## Build in help
@@ -38,19 +42,19 @@
 -
 <br />
 
-## Advanced 'multi-node' features
+## Advanced features
 
 ### To install a 'multi-node' with a specific username. Auto-ports feature is enabled by default.
-`bash install.sh multi-node --user mysnode10`
+`bash install.sh --user mysnode10`
 
 #### Or use the shorthand version
-`bash install.sh multi-node -u mysnode10`
+`bash install.sh -u mysnode10`
 
 ### To install a 'multi-node' with specific username and manual ports config
-`bash install.sh multi-node --user mysnode10 --manual-ports p2p:10330,rpc:10331,zmq:10332`
+`bash install.sh --user mysnode10 --ports p2p:10330,rpc:10331,zmq:10332`
 
 #### Or use the shorthand version
-`bash install.sh multi-node -u mysnode10 -m p2p:10330,rpc:10331,zmq:10332`
+`bash install.sh -u mysnode10 -p p2p:10330,rpc:10331,zmq:10332`
 
 ## After install (NOT A REQUIRED STEP)
 
