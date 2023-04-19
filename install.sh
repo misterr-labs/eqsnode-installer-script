@@ -226,7 +226,7 @@ ports_option_handler() {
   elif valid_manual_port_string_format "$1" ; then
     parse_manual_port_string_and_set_config_if_valid "$1"
   else
-    echo -e "Invalid --manual-ports config format '$1'\n"
+    echo -e "Invalid --ports config format '$1'\n"
     usage
   fi
 }
@@ -396,7 +396,7 @@ validate_running_user() {
 
   if running_user_has_active_daemon; then
     echo -e "\n\033[0;33mSAFETY POLICY VIOLATION: User '${config[running_user]}' is already running an active service node daemon. Please install with a different user!\033[0m"
-    echo -e "\nIn case you want to install a second service node on this VPS or server, please use the following command instead:\n\n\033[0;33m    bash install.sh --multi-node\033[0m"
+    echo -e "\nIn case you want to install a second service node on this VPS or server, please use the following command instead:\n\n\033[0;33m    bash install.sh -m\033[0m"
     echo -e "\nInstallation aborted."
     exit 1
   fi
