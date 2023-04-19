@@ -13,25 +13,19 @@ source "${script_basedir}/common.sh"
 installer_home=
 auto_find_result=
 
-typeset -A commands_set
-commands_set=(
-  [multi_node]=0
-)
-
 typeset -A command_options_set
 command_options_set=(
-  [multi_node]=0
-  [auto_ports]=0
-  [manual_ports]=0
-  [preview_auto_magic]=0
-  [user]=0
-  [skip_prepare_sn]=0
-  [version]=0
   [help]=0
+  [inspect_auto_magic]=0
+  [multi_node]=0
+  [ports]=0
+  [skip_prepare_sn]=0
+  [user]=0
+  [version]=0
 )
-manual_ports_option_value=
-version_option_value=
+ports_option_value=
 user_option_value=
+version_option_value=
 
 main() {
   print_splash_screen
@@ -75,45 +69,21 @@ process_command_line_args() {
   set_config_and_execute_info_commands
 }
 
-
-
-#  -m  --multi-node            Shorthand for --user auto'. Setting --user will override this option
-#  -i  --inspect-auto-magic    Display preview of all automatically set port, user and Equilibria version
-#  -p  --ports [auto|config]   Manual port configuration; 'p2p:<port>,rpc:<port>,zmq:<port>'
-#                              Example:  --ports p2p:9330,rpc:9331,zmq:9332
-#
-#                              Auto detect ports; This requires ALL other service nodes to be active!
-#                              Example:  --ports auto
-#
-#  -u --user [auto|name]       Set username that will run the service node or 'auto' for autodetect
-#                              Example:  --user snode2
-#                                        --user auto
-#
-#  -v --version [tag]          Set Equilibria version with format 'v0.0.0'
-#  --skip-prepare-sn           Skip the auto start of the prepare_sn command at the end
-#                              of the install
-#
-#  -h  --help                  Show this help text
 parse_command_line_args() {
-  args="$(getopt -a -n installer -o "hpam:u:v:" --long help,preview-auto-magic,auto-ports,skip-prepare-sn,manual-ports:,user:,version: -- "$@") 'END'"
+  args="$(getopt -a -n installer -o "himp:u:v:" --long help,inspect-auto-magic,multi-node,auto-ports,skip-prepare-sn,ports:,user:,version: -- "$@")"
   eval set -- "${args}"
 
   while :
   do
     case "$1" in
-      multi-node)                   commands_set[multi_node]=1 ; shift ;;
-
-      -a | --auto-ports)            command_options_set[auto_ports]=1; shift ;;
-      -p | --preview-auto-magic)    command_options_set[preview_auto_magic]=1; shift; ;;
-      -m | --manual-ports)          command_options_set[manual_ports]=1; manual_ports_option_value="$2"; shift 2 ;;
+      -h | --help)                  command_options_set[help]=1 ; shift ;;
+      -i | --inspect-auto-magic)    command_options_set[inspect_auto_magic]=1; shift; ;;
+      -m | --multi-node)            command_options_set[multi_node]=1; shift ;;
+      -p | --ports)                 command_options_set[ports]=1; ports_option_value="$2"; shift 2 ;;
       --skip-prepare-sn)            command_options_set[skip_prepare_sn]=1 ; shift ;;
       -u | --user)                  command_options_set[user]=1; user_option_value="$2"; shift 2 ;;
-
       -v | --version)               command_options_set[version]=1; version_option_value="$2"; shift 2 ;;
-      -h | --help)                  command_options_set[help]=1 ; shift ;;
-
-      --)                           shift ; ;;
-      END)                          break ;;
+      --)                           shift ; break ;;
       *)                            echo "Unexpected option: $1" ;
                                     usage
                                     exit 0 ;;
@@ -122,26 +92,22 @@ parse_command_line_args() {
 }
 
 set_config_and_execute_info_commands() {
-  [[ "${commands_set[multi_node]}" -eq 1 ]] && config[multi_node]=1
 
   # info commands, exit 0 must be first listed options in this function
-  [[ "${command_options_set[preview_auto_magic]}" -eq 1 ]] && preview_auto_magic_option_handler && exit 0
+  [[ "${command_options_set[inspect_auto_magic]}" -eq 1 ]] && inspect_auto_magic_option_handler && exit 0
   [[ "${command_options_set[help]}" -eq 1 ]] && usage && exit 0
 
   # direct set config
+  [[ "${command_options_set[multi_node]}" -eq 1 && "${command_options_set[user]}" -eq 0 ]] && user_option_handler "auto"
+  [[ "${command_options_set[user]}" -eq 1 ]] && user_option_handler "${user_option_value}"
   [[ "${command_options_set[skip_prepare_sn]}" -eq 1 ]] && config[skip_prepare_sn]=1
-  [[ "${command_options_set[user]}" -eq 1 ]] && config[running_user]="${user_option_value}"
   [[ "${command_options_set[version]}" -eq 1 ]] && config[install_version]="${version_option_value}"
 
   # process more complex set config
-  [[ "${command_options_set[manual_ports]}" -eq 1 ]] && manual_ports_option_handler "${manual_ports_option_value}"
-  [[ "${command_options_set[auto_ports]}" -eq 1 ]] && auto_ports_option_handler
+  [[ "${command_options_set[ports]}" -eq 1 ]] && ports_option_handler "${ports_option_value}"
 
   # set default port option if none is set
-  [[ "${config[multi_node]}" -eq 1 && "${command_options_set[auto_ports]}" -eq 0 && "${command_options_set[manual_ports]}" -eq 0 ]] && auto_ports_option_handler
-
-  # if not in multi-node mode and not --username set, auto-scan for an available username for running user
-  [[ "${config[multi_node]}" -eq 1 && "${command_options_set[user]}" -eq 0 ]] && auto_search_available_username
+  [[ "${command_options_set[ports]}" -eq 0 ]] && ports_option_handler "auto"
 
   # necessary return 0
   return 0
@@ -151,19 +117,12 @@ validate_parsed_command_line_args() {
   local friendly_option_groupings group_option_count command_options_set_string unique_count valid_option_combi_found
   valid_option_combi_found=0
 
-  if [[ "${commands_set[multi_node]}" -eq 1 ]]; then
-    # multi-node options that do not bite each other
-    friendly_option_groupings=(
-      "<no_options_set>"
-      "manual_ports user skip_prepare_sn version"
-      "auto_ports user skip_prepare_sn version"
-      "preview_auto_magic"
-      "help"
-    )
-  else
-    # 'single-node' options that do not bite each other
-    friendly_option_groupings=("<no_options_set>" "skip_prepare_sn version" "help")
-  fi
+  friendly_option_groupings=(
+    "<no_options_set>"
+    "multi_node ports user skip_prepare_sn version"
+    "inspect_auto_magic"
+    "help"
+  )
   command_options_set_string="$(generate_set_options_string)"
   [[ "${command_options_set_string}" = '' ]] && command_options_set_string='<no_options_set>'
 
@@ -177,10 +136,6 @@ validate_parsed_command_line_args() {
 
   if [[ "${valid_option_combi_found}" -eq 0 && "${command_options_set_string}" != '<no_options_set>' ]]; then
     echo -e "error: invalid parameter combination \n"
-    usage
-    exit 1
-  elif [[ "${valid_option_combi_found}" -eq 0 && "${command_options_set_string}" = '<no_options_set>' ]]; then
-    echo -e "error: no options set\n"
     usage
     exit 1
   fi
@@ -206,8 +161,8 @@ auto_ports_option_handler() {
   fi
 }
 
-preview_auto_magic_option_handler() {
-  auto_ports_option_handler
+inspect_auto_magic_option_handler() {
+  ports_option_handler "auto"
   echo -e "\nIf needed you can alter and set these ports manually by:\n\n    \033[0;33mbash install.sh multi-node -m p2p:9330,rpc:9331,zmq:9332\033[0m\n"
 
   auto_search_available_username
@@ -244,8 +199,18 @@ auto_find_ports_and_set_config_if_found() {
     done
 }
 
-manual_ports_option_handler() {
-  if valid_manual_port_string_format "$1" ; then
+user_option_handler() {
+  if [[ "$1" = "auto" ]]; then
+    auto_search_available_username
+  else
+    config[running_user]="$1"
+  fi
+}
+
+ports_option_handler() {
+  if [[ "$1" = "auto" ]]; then
+    auto_ports_option_handler
+  elif valid_manual_port_string_format "$1" ; then
     parse_manual_port_string_and_set_config_if_valid "$1"
   else
     echo -e "Invalid --manual-ports config format '$1'\n"
@@ -403,10 +368,7 @@ validate_running_user() {
 
   if running_user_has_active_daemon; then
     echo -e "\n\033[0;33mSAFETY POLICY VIOLATION: User '${config[running_user]}' is already running an active service node daemon. Please install with a different user!\033[0m"
-
-    if [[ "${config[multi_node]}" -eq 0 ]]; then
-      echo -e "\nIn case you want to install a second service node on this VPS or server, please use the following command instead:\n\n\033[0;33m    bash install.sh multi-node\033[0m"
-    fi
+    echo -e "\nIn case you want to install a second service node on this VPS or server, please use the following command instead:\n\n\033[0;33m    bash install.sh --multi-node\033[0m"
     echo -e "\nInstallation aborted."
     exit 1
   fi

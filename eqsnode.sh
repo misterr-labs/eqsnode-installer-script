@@ -16,12 +16,12 @@ source "${script_basedir}/common.sh"
 
 service_name=
 service_file=
-[[ "${config[multi_node]}" -eq 1 ]] && service_name="eqnode_${config[running_user]}.service" || service_name="eqnode.service"
+service_name="eqnode_${config[running_user]}.service"
 service_file="${install_root_service}/${service_name}"
 readonly service_name service_file
 
 port_params=
-if [[ "${config[multi_node]}" -eq 1 ]]; then
+if ! default_ports_configured; then
   port_params="--zmq-rpc-bind-port ${config[zmq_rpc_bind_port]} --p2p-bind-port ${config[p2p_bind_port]} --rpc-bind-port ${config[rpc_bind_port]}"
 fi
 readonly port_params
