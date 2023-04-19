@@ -468,7 +468,7 @@ write_install_config_to_install_user_homedir() {
 }
 
 install_with_running_user() {
-  create_install_session_screen_lifeline
+#  create_install_session_screen_lifeline
   sudo -H -u "${config[running_user]}" bash -c 'cd ~/eqnode_installer/ && bash eqsnode.sh install'
 }
 
