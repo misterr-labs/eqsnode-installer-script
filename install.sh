@@ -13,6 +13,8 @@ source "${script_basedir}/common.sh"
 installer_home=
 auto_find_result=
 
+#—disable-zmq
+
 typeset -A command_options_set
 command_options_set=(
   [help]=0
@@ -95,12 +97,12 @@ set_config_and_execute_info_commands() {
   [[ "${command_options_set[help]}" -eq 1 ]] && usage && exit 0
 
   # direct set config
-  [[ "${command_options_set[multi_node]}" -eq 1 && "${command_options_set[user]}" -eq 0 ]] && user_option_handler "auto"
-  [[ "${command_options_set[user]}" -eq 1 ]] && user_option_handler "${user_option_value}"
   [[ "${command_options_set[skip_prepare_sn]}" -eq 1 ]] && config[skip_prepare_sn]=1
-  [[ "${command_options_set[version]}" -eq 1 ]] && version_option_handler "${version_option_value}"
 
   # process more complex set config
+  [[ "${command_options_set[multi_node]}" -eq 1 && "${command_options_set[user]}" -eq 0 ]] && user_option_handler "auto"
+  [[ "${command_options_set[user]}" -eq 1 ]] && user_option_handler "${user_option_value}"
+  [[ "${command_options_set[version]}" -eq 1 ]] && version_option_handler "${version_option_value}"
   [[ "${command_options_set[ports]}" -eq 1 ]] && ports_option_handler "${ports_option_value}"
 
   # set default options if none is set
@@ -349,11 +351,12 @@ inspect_time_services () {
 upgrade_cmake_if_needed() {
   local current_cmake_version distro_name distro_version_codename
 
-  current_cmake_version="$(cmake --version | awk 'NR==1 { print $3  }')"
+  [[ -x "$(command -v cmake)" ]] && current_cmake_version="$(cmake --version | awk 'NR==1 { print $3  }')" || current_cmake_version=0
+
   distro_name="$(lsb_release -a 2> /dev/null | grep 'Distributor ID:' | awk '{ print tolower($3) }')"
   distro_version_codename="$(lsb_release -a 2>/dev/null | grep 'Codename:' | awk '{ print $2 }')"
 
-  if [[ "${distro_name}" = "ubuntu" && $(version2num "${current_cmake_version}") -lt $(version2num "3.18") ]]; then
+  if [[ "${distro_name}" = "ubuntu" && ( "${current_cmake_version}" -eq 0 || $(version2num "${current_cmake_version}") -lt $(version2num "3.18") ) ]]; then
     echo -e "\n\033[1mUpgrading cmake (${current_cmake_version}) to newest version...\033[0m"
     sudo apt-get update
     sudo apt-get install gpg wget
