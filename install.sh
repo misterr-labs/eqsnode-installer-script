@@ -359,11 +359,11 @@ upgrade_cmake_if_needed() {
   if [[ "${distro_name}" = "ubuntu" && ( "${current_cmake_version}" -eq 0 || $(version2num "${current_cmake_version}") -lt $(version2num "3.18") ) ]]; then
     echo -e "\n\033[1mUpgrading cmake (${current_cmake_version}) to newest version...\033[0m"
     sudo apt-get update
-    sudo apt-get install gpg wget
+    sudo apt-get -y install gpg wget
     wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | sudo tee /usr/share/keyrings/kitware-archive-keyring.gpg >/dev/null
     echo "deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ ${distro_version_codename} main" | sudo tee /etc/apt/sources.list.d/kitware.list >/dev/null
     sudo apt-get update
-    sudo apt-get install cmake
+    sudo apt-get -y install cmake
   fi
 }
 
