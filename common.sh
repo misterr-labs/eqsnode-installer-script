@@ -73,4 +73,8 @@ get_latest_equilibria_version_number() {
   git ls-remote --tags "${config[git_repository]}" | grep -o 'v.*' | sort -V | tail -1
 }
 
+version2num() {
+  echo "$@" | awk -F. '{ printf("%d%03d%03d%03d\n", $1, $2, $3, $4); }'
+}
+
 load_config

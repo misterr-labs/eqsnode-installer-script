@@ -135,7 +135,7 @@ validate_parsed_command_line_args() {
   done
 
   if [[ "${valid_option_combi_found}" -eq 0 && "${command_options_set_string}" != '<no_options_set>' ]]; then
-    echo -e "error: invalid parameter combination \n"
+    echo -e "\033[0;33merror: invalid parameter combination\033[0m\n"
     usage
     exit 1
   fi
@@ -154,12 +154,11 @@ version_option_handler() {
   if [[ "$1" = "auto" ]]; then
     echo -e "\n\033[1mAuto-detecting latest Equilibria version...\033[0m"
     config[install_version]="$(get_latest_equilibria_version_number)"
-    echo -e "Detected version -> ${config[install_version]}"
   else
     config[install_version]="$1"
     echo -e "\n\033[1mInstalling manually set Equilibria version:\033[0m"
-    echo -e "${config[install_version]}"
   fi
+  echo -e "Version -> ${config[install_version]}"
 }
 
 auto_ports_option_handler() {
@@ -176,7 +175,7 @@ auto_ports_option_handler() {
 inspect_auto_magic_option_handler() {
   version_option_handler "auto"
   ports_option_handler "auto"
-  auto_search_available_username
+  user_option_handler "auto"
 
   echo -e "\nIf needed you can alter these settings manually by one of the following commands (or combination):\n\033[0;33m"
   echo -e "    bash install.sh -v ${config[install_version]}"
@@ -325,7 +324,8 @@ init() {
 
 install_checks () {
   echo -e "\n\033[1mExecuting pre-install checks...\033[0m"
-  inspect_time_services
+#  inspect_time_services
+  upgrade_cmake_if_needed
 }
 
 inspect_time_services () {
@@ -349,6 +349,24 @@ inspect_time_services () {
             * ) echo -e "(Please answer Y or N)";;
       esac
     done
+  fi
+}
+
+upgrade_cmake_if_needed() {
+  local current_cmake_version distro_name distro_version_codename
+
+  current_cmake_version="$(cmake --version | awk 'NR==1 { print $3  }')"
+  distro_name="$(lsb_release -a 2> /dev/null | grep 'Distributor ID:' | awk '{ print tolower($3) }')"
+  distro_version_codename="$(lsb_release -a 2>/dev/null | grep 'Codename:' | awk '{ print $2 }')"
+
+  if [[ "${distro_name}" = "ubuntu" && $(version2num "${current_cmake_version}") -lt $(version2num "3.18") ]]; then
+    echo -e "\n\033[1mUpgrading cmake (${current_cmake_version}) to newest version...\033[0m"
+    sudo apt-get update
+    sudo apt-get install gpg wget
+    wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | sudo tee /usr/share/keyrings/kitware-archive-keyring.gpg >/dev/null
+    echo "deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ ${distro_version_codename} main" | sudo tee /etc/apt/sources.list.d/kitware.list >/dev/null
+    sudo apt-get update
+    sudo apt-get install cmake
   fi
 }
 

@@ -51,10 +51,10 @@ or
 `bash install.sh -u mysnode10`
 
 ### To install a 'multi-node' with specific username and manual ports config
-`bash install.sh --user mysnode10 --manual-ports p2p:10330,rpc:10331,zmq:10332`
+`bash install.sh --user mysnode10 --ports p2p:10330,rpc:10331,zmq:10332`
 
 #### Or use the shorthand version
-`bash install.sh -u mysnode10 -m p2p:10330,rpc:10331,zmq:10332`
+`bash install.sh -u mysnode10 -p p2p:10330,rpc:10331,zmq:10332`
 
 ## After install (NOT A REQUIRED STEP)
 

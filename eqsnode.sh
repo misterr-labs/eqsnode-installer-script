@@ -14,8 +14,6 @@ readonly script_basedir install_root_bin_dir install_root_service
 
 source "${script_basedir}/common.sh"
 
-service_name=
-service_file=
 service_name="eqnode_${config[running_user]}.service"
 service_file="${install_root_service}/${service_name}"
 readonly service_name service_file
@@ -101,6 +99,9 @@ install_required_packages() {
   echo -e "\n\033[1mInstalling tool packages...\033[0m"
   sudo apt -y install wget unzip git
   sudo apt update
+#  ln -s /usr/local/lib/python3.8/dist-packages/cmake /usr/bin/cmake
+#https://apt.kitware.com/
+
   sudo apt-get -y install bc build-essential cmake pkg-config libboost-all-dev libssl-dev libzmq3-dev libunbound-dev libsodium-dev libunwind8-dev liblzma-dev libreadline6-dev libldns-dev libexpat1-dev doxygen graphviz libpgm-dev qttools5-dev-tools libhidapi-dev libusb-dev libprotobuf-dev protobuf-compiler
 }
 
