@@ -1,4 +1,4 @@
-eqnode_installer_version='v3.1.1'
+eqnode_installer_version='v4.0.0'
 readonly eqnode_installer_version
 
 installer_session_state_file="${script_basedir}/.installsessionstate"
@@ -16,6 +16,7 @@ config=(
   [rpc_bind_port]=0
   [zmq_rpc_bind_port]=0
   [multi_node]=0
+  [skip_prepare_sn]=0
 )
 
 typeset -A installer_state

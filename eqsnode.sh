@@ -43,6 +43,7 @@ main() {
     status )        status ;;
     log )           log ;;
     update )        update ;;
+    fakerun )       sleep 300 ;;
 #    fork_update ) fork_update ;;
     print_sn_key )  print_sn_key ;;
     * ) usage
