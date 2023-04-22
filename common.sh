@@ -1,5 +1,8 @@
-eqnode_installer_version='v4.0.2'
+eqnode_installer_version='v5.0.0'
 readonly eqnode_installer_version
+
+version_regex="^v[0-9]+.[0-9]+.[0-9]+$"
+readonly version_regex
 
 installer_session_state_file="${script_basedir}/.installsessionstate"
 readonly installer_session_state_file
@@ -9,12 +12,10 @@ readonly config_file
 
 typeset -A config
 config=(
+  [nodes]=
   [install_version]='auto'
   [running_user]='snode'
   [git_repository]='https://github.com/EquilibriaCC/Equilibria.git'
-  [p2p_bind_port]=0
-  [rpc_bind_port]=0
-  [zmq_rpc_bind_port]=0
   [skip_prepare_sn]=0
 )
 
