@@ -43,7 +43,7 @@ main() {
   discover_system system_info
   process_command_line_args "$@"
 
-  init
+#  init
   install_checks
   install_manager
   finish_install
@@ -419,10 +419,10 @@ auto_search_available_username() {
   done
 }
 
-init() {
+#init() {
 #  [[ "${config[running_user]}" = "root" ]] && homedir='/root' || homedir="/home/${config[running_user]}"
 #  installer_home="${homedir}/eqnode_installer"
-}
+#}
 
 install_checks () {
   echo -e "\n\033[1mExecuting pre-install checks...\033[0m"
@@ -574,6 +574,7 @@ copy_blockchain_to_user_home_if_needed() {
     target_dir="/home/${node_config[running_user]}/.equilibria"
     cp -R "${node_config[copy_blockchain]}" "${target_dir}"
     rm "${target_dir}/key" "${target_dir}/equilibria.log"  "${target_dir}/p2pstate.bin"
+    sudo chown -R "${node_config[running_user]}":"${node_config[running_user]}" "${target_dir}"
   fi
 }
 
