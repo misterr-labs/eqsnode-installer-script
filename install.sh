@@ -43,7 +43,6 @@ main() {
   discover_system system_info
   process_command_line_args "$@"
 
-#  init
   install_checks
   install_manager
   finish_install
@@ -75,12 +74,12 @@ process_command_line_args() {
   validate_parsed_command_line_args
   set_config_and_execute_info_commands
 
-  echo -e "\n"
-  local keys=( $( echo ${!config[@]} | tr ' ' $'\n' | natsort) )
-  for key in "${keys[@]}"
-  do
-    echo -e "${key}=${config[${key}]}"
-  done
+#  echo -e "\n"
+#  local keys=( $( echo ${!config[@]} | tr ' ' $'\n' | natsort) )
+#  for key in "${keys[@]}"
+#  do
+#    echo -e "${key}=${config[${key}]}"
+#  done
 }
 
 parse_command_line_args() {
@@ -419,11 +418,6 @@ auto_search_available_username() {
   done
 }
 
-#init() {
-#  [[ "${config[running_user]}" = "root" ]] && homedir='/root' || homedir="/home/${config[running_user]}"
-#  installer_home="${homedir}/eqnode_installer"
-#}
-
 install_checks () {
   echo -e "\n\033[1mExecuting pre-install checks...\033[0m"
   inspect_time_services
@@ -505,6 +499,7 @@ setup_all_running_users() {
 
   echo -e "\n\033[0;33mWe may need to create one or more users to run the service node(s). You will be asked to enter a password for these users. Please make sure to keep those passwords safe.\033[0m\n"
   read -n 1 -s -r -p "Press ANY key to continue"
+  echo -e "\n"
 
   while [ "${idx}" -le "${config[nodes]}" ]; do
     echo -e "\n\033[1mSetting up user '${config["snode${idx}__running_user"]}' to run service node ${idx}...\033[0m\n"
@@ -607,7 +602,7 @@ install_node_with_running_user() {
 
 finish_node_install() {
   local user="$1"
-  sudoers_running_user_nopasswd 'remove' "${user}"
+  sudoers_user_nopasswd 'remove' "${user}"
 }
 
 usage() {

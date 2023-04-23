@@ -231,7 +231,7 @@ watch_daemon_status() {
     printf "\r\t(%.01f%%) - %d/%d (%s)%-18s" "${perc}" "${blocks_done}" "${total_blocks}" "${estimate_time_remaining}" ""
 
     if [[ $blocks_done -eq $total_blocks ]]; then
-      printf "\r\t(%.01f%%) - %d/%d (%s)%-18s" "${perc}" "${blocks_done}" "${total_blocks}" "Completed" ""
+      printf "\r\t(%.01f%%) - %d/%d (%s)%-25s" "${perc}" "${blocks_done}" "${total_blocks}" "Completed" ""
       echo -e "\n"
       break
     fi
