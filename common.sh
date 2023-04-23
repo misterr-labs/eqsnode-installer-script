@@ -15,8 +15,8 @@ config=(
   [nodes]=
   [install_version]='auto'
   [running_user]='snode'
+  [required_cmake_version]='3.18'
   [git_repository]='https://github.com/EquilibriaCC/Equilibria.git'
-  [skip_prepare_sn]=0
 )
 
 typeset -A installer_state
@@ -38,19 +38,19 @@ typeset -A default_service_node_ports
 default_service_node_ports=(
   [p2p_bind_port]=9230
   [rpc_bind_port]=9231
-  [zmq_rpc_bind_port]=9232
 )
 readonly default_service_node_ports
 
 load_config() {
-#  grep -F "#" &>/dev/null
-  while read line; do
-    if echo "${line}" | grep -q "="; then
-      varname=$(echo "${line}" | cut -d '=' -f 1)
-      varvalue=$(echo "${line}" | cut -d '=' -f 2)
-      config[${varname}]=${varvalue}
-    fi
-  done < ${config_file}
+  if [[ -f "${config_file}" ]]; then
+    while read line; do
+      if echo "${line}" | grep -q "="; then
+        varname=$(echo "${line}" | cut -d '=' -f 1)
+        varvalue=$(echo "${line}" | cut -d '=' -f 2)
+        config[${varname}]=${varvalue}
+      fi
+    done < ${config_file}
+  fi
 }
 
 set_install_session_state() {
@@ -65,8 +65,7 @@ read_install_session_state() {
 default_ports_configured() {
   [[
     "${config[p2p_bind_port]}" -eq "${default_service_node_ports[p2p_bind_port]}" &&
-    "${config[rpc_bind_port]}" -eq "${default_service_node_ports[rpc_bind_port]}" &&
-    "${config[zmq_rpc_bind_port]}" -eq "${default_service_node_ports[zmq_rpc_bind_port]}"
+    "${config[rpc_bind_port]}" -eq "${default_service_node_ports[rpc_bind_port]}"
   ]]
 }
 

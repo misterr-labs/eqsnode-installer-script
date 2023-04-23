@@ -11,11 +11,6 @@ readonly script_basedir
 source "${script_basedir}/common.sh"
 source "${script_basedir}/discovery.sh"
 
-installer_home=
-auto_find_result=
-
-#—disable-zmq
-
 typeset -A command_options_set
 command_options_set=(
   [help]=0
@@ -24,7 +19,6 @@ command_options_set=(
   [multi_node]=0
   [nodes]=0
   [ports]=0
-  [skip_prepare_sn]=0
   [user]=0
   [version]=0
 )
@@ -43,7 +37,7 @@ main() {
   discover_system system_info
   process_command_line_args "$@"
 
-  install_checks
+  pre_install_checks
   install_manager
 }
 
@@ -62,9 +56,9 @@ SPLASHMSG
 }
 
 install_dependencies() {
-  if ! [[ -x "$(command -v netstat)" && -x "$(command -v natsort)" && -x "$(command -v bc)" && -x "$(command -v grep)" && -x "$(command -v getopt)" && -x "$(command -v gawk)" ]]; then
+  if ! [[ -x "$(command -v netstat)" && -x "$(command -v natsort)" && -x "$(command -v grep)" && -x "$(command -v getopt)" && -x "$(command -v gawk)" ]]; then
     echo -e "\n\033[1mFixing required dependencies....\033[0m"
-    sudo apt -y install net-tools python3-natsort bc grep util-linux gawk
+    sudo apt -y install net-tools python3-natsort grep util-linux gawk
   fi
 }
 
@@ -72,17 +66,10 @@ process_command_line_args() {
   parse_command_line_args "$@"
   validate_parsed_command_line_args
   set_config_and_execute_info_commands
-
-#  echo -e "\n"
-#  local keys=( $( echo ${!config[@]} | tr ' ' $'\n' | natsort) )
-#  for key in "${keys[@]}"
-#  do
-#    echo -e "${key}=${config[${key}]}"
-#  done
 }
 
 parse_command_line_args() {
-  args="$(getopt -a -n installer -o "himc:n:p:u:v:" --long help,inspect-auto-magic,skip-prepare-sn,copy-blockchain:,nodes:,ports:,user:,version: -- "$@")"
+  args="$(getopt -a -n installer -o "himc:n:p:u:v:" --long help,inspect-auto-magic,copy-blockchain:,nodes:,ports:,user:,version: -- "$@")"
   eval set -- "${args}"
 
   while :
@@ -93,7 +80,6 @@ parse_command_line_args() {
       -i | --inspect-auto-magic)    command_options_set[inspect_auto_magic]=1; shift ;;
       -n | --nodes)                 command_options_set[nodes]=1; nodes_option_value="$2"; shift 2 ;;
       -p | --ports)                 command_options_set[ports]=1; ports_option_value="$2"; shift 2 ;;
-      --skip-prepare-sn)            command_options_set[skip_prepare_sn]=1 ; shift ;;
       -u | --user)                  command_options_set[user]=1; user_option_value="$2"; shift 2 ;;
       -v | --version)               command_options_set[version]=1; version_option_value="$2"; shift 2 ;;
       --)                           shift ; break ;;
@@ -113,11 +99,7 @@ set_config_and_execute_info_commands() {
   # info commands, exit 0 must be first listed options in this function
   [[ "${command_options_set[inspect_auto_magic]}" -eq 1 ]] && inspect_auto_magic_option_handler && exit 0
 
-  # direct set config
-  [[ "${command_options_set[skip_prepare_sn]}" -eq 1 ]] && config[skip_prepare_sn]=1
-
   # process more complex set config
-
   if [[ "${command_options_set[version]}" -eq 1 ]]; then version_option_handler "${version_option_value}"; else version_option_handler "auto"; fi
   if [[ "${command_options_set[ports]}" -eq 1 ]]; then ports_option_handler "${ports_option_value}"; else ports_option_handler "auto"; fi
   if [[ "${command_options_set[user]}" -eq 1 ]]; then user_option_handler "${user_option_value}"; else user_option_handler "auto"; fi
@@ -149,7 +131,7 @@ validate_parsed_command_line_args() {
   done
 
   if [[ "${valid_option_combi_found}" -eq 0 && "${command_options_set_string}" != '<no_options_set>' ]]; then
-    echo -e "\033[0;33merror: invalid parameter combination\033[0m\n"
+    echo -e "\033[0;33merror: Invalid parameter combination\033[0m\n"
     usage
     exit 1
   fi
@@ -168,7 +150,8 @@ nodes_option_handler() {
   local max_nodes_by_free_space max_nodes_by_memory max_nodes
 
   if ! [[ "$1" =~ ^[0-9]+$ ]]; then
-    echo -e "\033[0;33merror: invalid --nodes option value. Numbers only.\033[0m\n"
+    echo -e "\033[0;33merror: Invalid --nodes option value. Numbers only.\033[0m\n"
+    usage
     exit 1
   fi
 
@@ -206,7 +189,7 @@ copy_blockchain_option_handler() {
   fi
 
   # TODO: check directory contains blockchain
-  if [[ "${option_value}" = "no" || -d "${option_value}" ]]; then
+  if [[ "${option_value}" = "no" || -f "${option_value}/lmdb/data.mdb" ]]; then
       while [ "${idx}" -le "${config[nodes]}" ]; do
         config["snode${idx}__copy_blockchain"]="${option_value}"
         idx=$((idx + 1))
@@ -227,7 +210,7 @@ copy_blockchain_option_handler() {
   fi
 
   idx=1
-  echo -e "\n\033[1mBlockchain copy status...\033[0m"
+  echo -e "\n\033[1mBlockchain copy settings...\033[0m"
   while [ "${idx}" -le "${config[nodes]}" ]; do
     [[ "${config[nodes]}" -gt 1 ]] && echo -e "\nService Node ${idx}:"
     echo -e "Copy blockchain: ${config["snode${idx}__copy_blockchain"]}"
@@ -243,7 +226,7 @@ version_option_handler() {
     config[install_version]="$1"
     echo -e "\n\033[1mInstalling manually set Equilibria version:\033[0m"
   else
-    echo -e "Invalid --version value '$1'\n"
+    echo -e "\033[0;33merror: Invalid --version value '$1'\033[0m\n"
     usage
     exit 1
   fi
@@ -274,10 +257,11 @@ inspect_auto_magic_option_handler() {
   user_option_handler "auto"
   copy_blockchain_option_handler "auto"
 
-  echo -e "\nIf needed you can alter these settings manually by one of the following commands (or combination):\n\033[0;33m"
-  echo -e "    bash install.sh -v ${config[install_version]}"
-  echo -e "    bash install.sh -p p2p:9330,rpc:9331,zmq:9332"
-  echo -e "    bash install.sh -u mysnodeuser\033[0m\n"
+  echo -e "\nIf needed you can alter these settings manually by one of the following example commands (or combination):\n\033[0;33m"
+  echo -e "    bash install.sh --version ${config[install_version]}"
+  echo -e "    bash install.sh --ports p2p:9330,rpc:9331"
+  echo -e "    bash install.sh --user mysnodeuser"
+  echo -e "    bash install.sh --copy_blockchain no\033[0m\n"
 }
 
 user_option_handler() {
@@ -287,7 +271,7 @@ user_option_handler() {
   elif validate_manual_user_string_format "$1"; then
     validate_manual_users_and_set_config_if_valid "$1"
   else
-    echo -e "\nInvalid --user value '$1'\n"
+    echo -e "\n\033[0;33merror: Invalid --user value '$1'\033[0m\n"
     usage
     exit 1
   fi
@@ -328,7 +312,7 @@ ports_option_handler() {
   elif valid_manual_port_string_format "$1" ; then
     parse_manual_port_string_and_set_config_if_valid "$1"
   else
-    echo -e "Invalid --ports config format '$1'\n"
+    echo -e "\033[0;33merror: Invalid --ports config format '$1'\033[0m\n"
     usage
   fi
 }
@@ -417,7 +401,7 @@ auto_search_available_username() {
   done
 }
 
-install_checks () {
+pre_install_checks () {
   echo -e "\n\033[1mExecuting pre-install checks...\033[0m"
   inspect_time_services
   upgrade_cmake_if_needed
@@ -448,30 +432,27 @@ inspect_time_services () {
 }
 
 upgrade_cmake_if_needed() {
-  local current_cmake_version distro_name distro_version_codename
+  local current_cmake_version
 
-  [[ -x "$(command -v cmake)" ]] && current_cmake_version="$(cmake --version | awk 'NR==1 { print $3  }')" || current_cmake_version='none'
+  [[ -x "$(command -v cmake)" ]] && current_cmake_version="$(cmake --version | awk 'NR==1 { print $3  }')" || current_cmake_version='not installed'
 
-  distro_name="$(lsb_release -a 2> /dev/null | grep 'Distributor ID:' | awk '{ print tolower($3) }')"
-  distro_version_codename="$(lsb_release -a 2>/dev/null | grep 'Codename:' | awk '{ print $2 }')"
-
-  if [[ "${distro_name}" = "ubuntu" && ( "${current_cmake_version}" = 'none' || "$(version2num "${current_cmake_version}")" -lt "$(version2num "3.18")" ) ]]; then
+  if [[ "${system_info[distro]}" = "ubuntu" && ( "${current_cmake_version}" = 'not installed' || "$(version2num "${current_cmake_version}")" -lt "$(version2num "${config[required_cmake_version]}")" ) ]]; then
     echo -e "\n\033[1mUpgrading cmake (${current_cmake_version}) to newest version...\033[0m"
     sudo apt-get update
     sudo apt-get -y install gpg wget
     wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | sudo tee /usr/share/keyrings/kitware-archive-keyring.gpg >/dev/null
-    echo "deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ ${distro_version_codename} main" | sudo tee /etc/apt/sources.list.d/kitware.list >/dev/null
+    echo "deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ ${system_info[codename]} main" | sudo tee /etc/apt/sources.list.d/kitware.list >/dev/null
     sudo apt-get update
     sudo apt-get -y install cmake
   fi
 }
 
 install_manager() {
+  declare -A node_config
   local source_dir target_dir
   local idx=1
 
   setup_all_running_users
-  declare -A node_config
 
   while [ "${idx}" -le "${config[nodes]}" ]; do
     generate_node_config node_config "${idx}"
@@ -489,7 +470,7 @@ install_manager() {
     echo -e "\n\033[1mInstallation of Service Node ${idx} completed.\033[0m"
     idx=$((idx + 1))
   done
-#  echo -e "\033[0;33mPlease DO NOT forget to link a wallet to the new service node! This is done by copy and pasting the command line, obtained during the 'prepare_sn' step, into the wallet. Only then the activation of the service node will be complete and available for staking!\033[0m\n"
+  echo -e "\n\033[0;33mPlease DO NOT forget to link a wallet to the new service node! This is done by copy and pasting the command line, obtained during the 'prepare_sn' step, into the wallet. Only then the activation of the service node will be complete and available for staking!\033[0m\n"
   echo -e "\n\033[1mInstallation completed.\033[0m\n"
 }
 
@@ -565,10 +546,14 @@ copy_blockchain_to_user_home_if_needed() {
 
   if [[ -d "${node_config_ref[copy_blockchain]}" ]]; then
     echo -e "\n\033[1mCopying blockchain from '${node_config_ref[copy_blockchain]}'...(takes a minute or two)\033[0m"
-
     target_dir="/home/${node_config_ref[running_user]}/.equilibria"
-    cp -R "${node_config_ref[copy_blockchain]}" "${target_dir}"
-    rm "${target_dir}/key" "${target_dir}/equilibria.log"  "${target_dir}/p2pstate.bin"
+
+    if [[ -d "${target_dir}" ]]; then
+      # move existing .equilibria directory just to be safe
+      mv "${target_dir}" "${target_dir}_$(echo $RANDOM | md5sum | head -c 8)"
+    fi
+    sudo cp -R "${node_config_ref[copy_blockchain]}" "${target_dir}"
+    sudo rm -f "${target_dir}/key" "${target_dir}/equilibria.log" "${target_dir}/p2pstate.bin" 2>/dev/null
     sudo chown -R "${node_config_ref[running_user]}":"${node_config_ref[running_user]}" "${target_dir}"
   fi
 }
@@ -602,6 +587,15 @@ install_node_with_running_user() {
 finish_node_install() {
   local user="$1"
   sudoers_user_nopasswd 'remove' "${user}"
+}
+
+print_config() {
+  echo -e "\n"
+  local keys=( $( echo ${!config[@]} | tr ' ' $'\n' | natsort) )
+  for key in "${keys[@]}"
+  do
+    echo -e "${key}=${config[${key}]}"
+  done
 }
 
 usage() {
