@@ -19,7 +19,7 @@ readonly service_name service_file
 
 port_params=
 if ! default_ports_configured; then
-  port_params="--zmq-rpc-bind-port ${config[zmq_rpc_bind_port]} --p2p-bind-port ${config[p2p_bind_port]} --rpc-bind-port ${config[rpc_bind_port]}"
+  port_params="--p2p-bind-port ${config[p2p_bind_port]} --rpc-bind-port ${config[rpc_bind_port]}"
 fi
 readonly port_params
 
@@ -85,7 +85,6 @@ install_manager() {
     "${installer_state[enable_service]}")     enable_service_on_boot ;&
     "${installer_state[start_service]}")      start_service ;&
     "${installer_state[watch_daemon]}")       watch_daemon_status ;&
-    "${installer_state[ask_prepare]}")        ask_prepare_sn ;&
     "${installer_state[finished]}")           finish_eqsnode_install ;;
     *) printf "Unknown installer state '%s' found in '%s'. Aborting..." "${current_install_state}" "${installer_session_state_file}"
        exit 1 ;;
@@ -105,6 +104,11 @@ install_required_packages() {
 checkout_git_repo() {
   set_install_session_state "${installer_state[checkout_git]}"
 
+  if [[ "${config[node_id]}" -gt 1 && -d "${install_root_bin_dir}" ]]; then
+    echo -e "\n\033[1mSkipped checked out Equilibria git repo, already have binaries from Service Node 1...\033[0m"
+    return 0
+  fi
+
   if [ "${config[install_version]}" = 'auto' ]; then
     echo -e "\033[1mRetrieving latest version tag from Github...\033[0m"
     config[install_version]="$(git ls-remote --tags "${config[git_repository]}" | grep -o 'v.*' | sort -V | tail -1)"
@@ -119,7 +123,7 @@ compile_and_move_binaries() {
   set_install_session_state "${installer_state[compile_move]}"
 
   if [[ "${config[node_id]}" -gt 1 && -d "${install_root_bin_dir}" ]]; then
-    echo -e "\n\033[1mSkipped compiling Equilibria binaries, already copied from Service Node 1...\033[0m"
+    echo -e "\n\033[1mSkipped compiling Equilibria binaries, already have binaries from Service Node 1...\033[0m"
     return 0
   fi
 
@@ -199,7 +203,6 @@ watch_daemon_status() {
   local delta_time=
 
   echo -e "\n\033[1mMonitoring blockchain download progress by daemon:\033[0m"
-  setterm -cursor off
 
   while true; do
     read blocks_done total_blocks perc <<< "$(~/bin/daemon status ${port_params} | grep -o 'Height:.*' | sed -n 's/^Height: \([0-9]*\)\/\([0-9]*\) (\([0-9.]*\).*/\1 \2 \3/p')"
@@ -228,31 +231,12 @@ watch_daemon_status() {
     printf "\r\t(%.01f%%) - %d/%d (%s)%-18s" "${perc}" "${blocks_done}" "${total_blocks}" "${estimate_time_remaining}" ""
 
     if [[ $blocks_done -eq $total_blocks ]]; then
+      printf "\r\t(%.01f%%) - %d/%d (%s)%-18s" "${perc}" "${blocks_done}" "${total_blocks}" "Completed" ""
       echo -e "\n"
-      set_install_session_state "${installer_state[ask_prepare]}"
       break
     fi
     sleep 10 # sleep for 10 seconds
   done
-  setterm -cursor on
-}
-
-ask_prepare_sn() {
-  if [[ "${config[skip_prepare_sn]}" -eq 0 ]]; then
-    while true; do
-      read -p $'\033[1mDo you want to prepare the Service Node (prepare_sn)?\e[0m (press ENTER for: Yes) [Y/N]: ' yn
-      yn=${yn:-Y}
-
-        case $yn in
-              [Yy]* ) prepare_sn
-                      break;;
-              [Nn]* )
-                      echo -e "Note: you can prepare the Service Node by running the following command manually:\n\tbash ${script_basedir}/eqsnode.sh prepare_sn"
-                      exit 1;;
-              * ) echo -e "(Please answer Y or N)";;
-        esac
-    done
-  fi
 }
 
 finish_eqsnode_install() {
@@ -325,14 +309,6 @@ USAGEMSG
 usage_help_is_needed() {
   [[ ( "${#}" -ge "1" && ( "$1" = '-h' || "$1" = '--help' )) || "${#}" -eq "0" ]]
 }
-
-finally() {
-  result=$?
-  setterm -cursor on
-  echo ""
-  exit ${result}
-}
-trap finally EXIT ERR INT
 
 if usage_help_is_needed "$@"; then
   usage

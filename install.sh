@@ -457,12 +457,12 @@ inspect_time_services () {
 upgrade_cmake_if_needed() {
   local current_cmake_version distro_name distro_version_codename
 
-  [[ -x "$(command -v cmake)" ]] && current_cmake_version="$(cmake --version | awk 'NR==1 { print $3  }')" || current_cmake_version=0
+  [[ -x "$(command -v cmake)" ]] && current_cmake_version="$(cmake --version | awk 'NR==1 { print $3  }')" || current_cmake_version='none'
 
   distro_name="$(lsb_release -a 2> /dev/null | grep 'Distributor ID:' | awk '{ print tolower($3) }')"
   distro_version_codename="$(lsb_release -a 2>/dev/null | grep 'Codename:' | awk '{ print $2 }')"
 
-  if [[ "${distro_name}" = "ubuntu" && ( "${current_cmake_version}" -eq 0 || $(version2num "${current_cmake_version}") -lt $(version2num "3.18") ) ]]; then
+  if [[ "${distro_name}" = "ubuntu" && ( "${current_cmake_version}" = 'none' || "$(version2num "${current_cmake_version}")" -lt "$(version2num "3.18")" ) ]]; then
     echo -e "\n\033[1mUpgrading cmake (${current_cmake_version}) to newest version...\033[0m"
     sudo apt-get update
     sudo apt-get -y install gpg wget
@@ -478,9 +478,9 @@ install_manager() {
   local idx=1
 
   setup_all_running_users
+  declare -A node_config
 
   while [ "${idx}" -le "${config[nodes]}" ]; do
-    declare -A node_config
     generate_node_config node_config "${idx}"
 
     if [[ "${idx}" -gt 1 ]]; then
@@ -524,7 +524,7 @@ create_user_if_needed() {
   # shellcheck disable=SC2154
   if ! id -u "${user}" >/dev/null 2>&1; then
     sudo adduser --gecos GECOS "${user}"
-    sudo usermod -aG sudo "${cuser}"
+    sudo usermod -aG sudo "${user}"
   fi
 }
 
@@ -539,9 +539,9 @@ sudoers_user_nopasswd() {
 }
 
 generate_node_config() {
-  declare -n node_config="$1"
+  local -n node_config_ref="$1"
   local node_id="$2"
-  node_config=(
+  node_config_ref=(
     [node_id]="${node_id}"
     [install_version]="${config[install_version]}"
     [git_repository]='https://github.com/EquilibriaCC/Equilibria.git'
@@ -566,41 +566,38 @@ copy_binaries_to_directory(){
 }
 
 copy_blockchain_to_user_home_if_needed() {
-  declare -n node_config="$1"
+  local -n node_config_ref="$1"
   local source_dir target_dir
 
-  if [[ -d "${node_config[copy_blockchain]}" ]]; then
-    echo -e "Copying blockchain...(TODO)"
-    target_dir="/home/${node_config[running_user]}/.equilibria"
-    cp -R "${node_config[copy_blockchain]}" "${target_dir}"
+  if [[ -d "${node_config_ref[copy_blockchain]}" ]]; then
+    echo -e "\n\033[1mCopying blockchain from '${node_config_ref[copy_blockchain]}'...(takes a minute or two)\033[0m"
+
+    target_dir="/home/${node_config_ref[running_user]}/.equilibria"
+    cp -R "${node_config_ref[copy_blockchain]}" "${target_dir}"
     rm "${target_dir}/key" "${target_dir}/equilibria.log"  "${target_dir}/p2pstate.bin"
-    sudo chown -R "${node_config[running_user]}":"${node_config[running_user]}" "${target_dir}"
+    sudo chown -R "${node_config_ref[running_user]}":"${node_config_ref[running_user]}" "${target_dir}"
   fi
 }
 
 copy_installer_to_installer_home() {
-  declare -n node_config="$1"
-  [[ -d "${node_config[installer_home]}" ]] && echo -e "\033[1mDeleting old installer files...\033[0m" && sudo rm --recursive --force -- "${node_config[installer_home]}"
-
-  echo -e "\n\033[1mCopying installer to '${node_config[installer_home]}'...\033[0m"
-  sudo mkdir "${node_config[installer_home]}"
-  sudo cp eqsnode.sh eqnode.service.template common.sh "${node_config[installer_home]}"
-  write_node_config_to_installer_home node_config
-  sudo chown -R "${node_config[running_user]}":root "${node_config[installer_home]}"
-}
-
-write_node_config_to_installer_home() {
-  declare -n node_config="$1"
+  local -n node_config_ref="$1"
   local install_file_conf_path
-  install_file_conf_path="${node_config[installer_home]}/install.conf"
+  [[ -d "${node_config_ref[installer_home]}" ]] && echo -e "\033[1mDeleting old installer files...\033[0m" && sudo rm --recursive --force -- "${node_config_ref[installer_home]}"
+
+  echo -e "\n\033[1mCopying installer to '${node_config_ref[installer_home]}'...\033[0m"
+  sudo mkdir "${node_config_ref[installer_home]}"
+  sudo cp eqsnode.sh eqnode.service.template common.sh "${node_config_ref[installer_home]}"
+
+  install_file_conf_path="${node_config_ref[installer_home]}/install.conf"
 
   echo -e "\n\033[1mGenerating new install.conf in '${install_file_conf_path}'...\033[0m"
   sudo touch "${install_file_conf_path}"
 
-  for key in "${!node_config[@]}"
+  for key in "${!node_config_ref[@]}"
   do
-    echo -e "${key}=${config[${key}]}" | sudo tee -a "${install_file_conf_path}"
+    echo -e "${key}=${node_config[${key}]}" | sudo tee -a "${install_file_conf_path}"
   done
+  sudo chown -R "${node_config_ref[running_user]}":root "${node_config_ref[installer_home]}"
 }
 
 install_node_with_running_user() {
