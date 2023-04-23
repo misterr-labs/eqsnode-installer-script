@@ -98,6 +98,16 @@ discover_active_installations() {
 #   [[ "${#discovered_active_installations[*]}" -ge 1 ]]
 #}
 
+discover_inactive_installation() {
+  local user="$1"
+#  if [[ -d "${installer_home}" ]]; then
+#    if [[ -f "${installer_home}/.installsessionstate" ]] && [[ "$(cat "${installer_home}/.installsessionstate")" = "${installer_state[finished_eqsnode_install]}" ]]; then
+#      echo -e "\033[0;33mA finished installation of an Equilibria service node has been found! This installation script is ONLY for fresh installations not for updating a service node.\033[0m"
+#      exit 0
+#    fi
+#  fi
+}
+
 discover_free_port_sets() {
     declare -n result="$1"
     local number_of_sets="$2"

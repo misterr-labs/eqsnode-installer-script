@@ -118,6 +118,11 @@ checkout_git_repo() {
 compile_and_move_binaries() {
   set_install_session_state "${installer_state[compile_move]}"
 
+  if [[ "${config[node_id]}" -gt 1 && -d "${install_root_bin_dir}" ]]; then
+    echo -e "\n\033[1mSkipped compiling Equilibria binaries, already copied from Service Node 1...\033[0m"
+    return 0
+  fi
+
   echo -e "\n\033[1mCompiling Equilibria binaries...\033[0m"
   make
 

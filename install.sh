@@ -43,7 +43,6 @@ main() {
   discover_system system_info
   process_command_line_args "$@"
 
-  exit 0
   init
   install_checks
   install_manager
@@ -64,19 +63,6 @@ SPLASHMSG
   echo -e "Service node installer script ${eqnode_installer_version}\n"
 }
 
-install_manager() {
-  local idx=1
-
-  while [ "${idx}" -le "${config[nodes]}" ]; do
-    setup_running_user "${config["snode${idx}__running_user"]}"
-    copy_installer_or_continue_session
-    install_with_running_user
-
-    idx=$((idx + 1))
-  done
-
-}
-
 install_dependencies() {
   if ! [[ -x "$(command -v netstat)" && -x "$(command -v natsort)" && -x "$(command -v bc)" && -x "$(command -v grep)" && -x "$(command -v getopt)" && -x "$(command -v gawk)" ]]; then
     echo -e "\n\033[1mFixing required dependencies....\033[0m"
@@ -88,6 +74,13 @@ process_command_line_args() {
   parse_command_line_args "$@"
   validate_parsed_command_line_args
   set_config_and_execute_info_commands
+
+  echo -e "\n"
+  local keys=( $( echo ${!config[@]} | tr ' ' $'\n' | natsort) )
+  for key in "${keys[@]}"
+  do
+    echo -e "${key}=${config[${key}]}"
+  done
 }
 
 parse_command_line_args() {
@@ -119,7 +112,6 @@ set_config_and_execute_info_commands() {
   # set options first that effect other options and the parsing of their option value(s)
   if [[ "${command_options_set[nodes]}" -eq 1 ]]; then nodes_option_handler "${nodes_option_value}"; else nodes_option_handler 1; fi
 
-
   # info commands, exit 0 must be first listed options in this function
   [[ "${command_options_set[inspect_auto_magic]}" -eq 1 ]] && inspect_auto_magic_option_handler && exit 0
 
@@ -133,12 +125,6 @@ set_config_and_execute_info_commands() {
   if [[ "${command_options_set[user]}" -eq 1 ]]; then user_option_handler "${user_option_value}"; else user_option_handler "auto"; fi
   if [[ "${command_options_set[copy_blockchain]}" -eq 1 ]]; then copy_blockchain_option_handler "${copy_blockchain_option_value}"; else copy_blockchain_option_handler "auto"; fi
 
-  local keys=( $( echo ${!config[@]} | tr ' ' $'\n' | natsort) )
-  for key in "${keys[@]}"
-  do
-    echo -e "${key}=${config[${key}]}"
-  done
-  exit 0
   # necessary return 0
   return 0
 }
@@ -251,17 +237,6 @@ copy_blockchain_option_handler() {
   done
 }
 
-auto_search_blockchain() {
-  local blockchain
-  blockchain="$(discover_biggest_blockchain)"
-
-  if [[ -d "${blockchain}" ]]; then
-    config[copy_blockchain]="${blockchain}"
-  else
-    config[copy_blockchain]="no>auto"
-  fi
-}
-
 version_option_handler() {
   if [[ "$1" = "auto" ]]; then
     echo -e "\n\033[1mAuto-detecting latest Equilibria version...\033[0m"
@@ -345,6 +320,9 @@ validate_manual_users_and_set_config_if_valid() {
     idx=$((idx + 1))
   done
 }
+running_user_has_active_daemon() {
+   [[ "$(sudo ps aux | egrep '[b]in/daemon.*--service-node' | gawk '{ print $1 }' | natsort | uniq | grep -o "^${1}$" | wc -l)" -gt 0 ]]
+}
 
 ports_option_handler() {
   if [[ "$1" = "auto" ]]; then
@@ -406,13 +384,13 @@ parse_manual_port_string_and_set_config_if_valid() {
       validation_result="$(validate_port "${single_port_value}")"
 
       case "${validation_result}" in
-        'outside_port_range') printf "%s: %d \t-> \033[0;33mOut of range [allowed between 5000-49151]\033[0m\n" "${key_to_config_param[${port_key}]}" "${single_port_value}"
+        'outside_port_range') printf "%s: %d -> \033[0;33mOut of range [allowed between 5000-49151]\033[0m\n" "${key_to_config_param[${port_key}]}" "${single_port_value}"
                               port_error=1 ;;
 
-        'port_used')          printf "%s: %d \t-> \033[0;33mIn use\033[0m\n" "${key_to_config_param[${port_key}]}" "${single_port_value}"
+        'port_used')          printf "%s: %d -> \033[0;33mIn use\033[0m\n" "${key_to_config_param[${port_key}]}" "${single_port_value}"
                               port_error=1 ;;
 
-        'free_port')          printf "%s: %d \t-> OK\n" "${key_to_config_param[${port_key}]}" "${single_port_value}"
+        'free_port')          printf "%s: %d -> OK\n" "${key_to_config_param[${port_key}]}" "${single_port_value}"
                               config["snode${idx}__${key_to_config_param[${port_key}]}"]="${single_port_value}" ;;
 
         *)                    echo "Unknown port validation result" ; exit 1 ;;
@@ -434,6 +412,7 @@ auto_search_available_username() {
   local idx=1
   while [ "${idx}" -le "${config[nodes]}" ]; do
     config["snode${idx}__running_user"]="${discovered_usernames["${idx}"]}"
+
     [[ "${config[nodes]}" -gt 1 ]] && echo -e "\nService Node ${idx}:"
     echo -e "Detected unused username -> ${discovered_usernames["${idx}"]}"
     idx=$((idx + 1))
@@ -441,8 +420,8 @@ auto_search_available_username() {
 }
 
 init() {
-  [[ "${config[running_user]}" = "root" ]] && homedir='/root' || homedir="/home/${config[running_user]}"
-  installer_home="${homedir}/eqnode_installer"
+#  [[ "${config[running_user]}" = "root" ]] && homedir='/root' || homedir="/home/${config[running_user]}"
+#  installer_home="${homedir}/eqnode_installer"
 }
 
 install_checks () {
@@ -494,135 +473,143 @@ upgrade_cmake_if_needed() {
   fi
 }
 
-scan_for_concurrent_install_sessions() {
-  local pids pid_exec_path install_session_states home_user
-  pids=( $(sudo ps aux | egrep '[b]ash.*eqsnode.sh' | gawk '{ print $2 }' | grep '[0-9]') )
-  install_session_states=()
+install_manager() {
+  local source_dir target_dir
+  local idx=1
 
-  for process_id in "${pids[@]}"
-  do
-    # surpress stderr of pwdx command (in case process is stopped), which would otherwise break the command
-    pid_exec_path="$(sudo pwdx "${process_id}" 2> /dev/null | grep -o '/.*')"
+  setup_all_running_users
 
-    # empty when process stopped
-    if [[ "${pid_exec_path}" != "" ]] && [[ -f "${pid_exec_path}/.installsessionstate" ]]; then
-      home_user="$(echo "${pid_exec_path}" | grep -oP '/home/\K[^/]*')"
-      install_session_states+=("${home_user};${process_id};$(cat "${pid_exec_path}/.installsessionstate");${pid_exec_path}")
+  while [ "${idx}" -le "${config[nodes]}" ]; do
+    declare -A node_config
+    generate_node_config node_config "${idx}"
+
+    if [[ "${idx}" -gt 1 ]]; then
+      source_dir="/home/${config["snode1__running_user"]}/bin"
+      target_dir="/home/${node_config[running_user]}/bin"
+      copy_binaries_to_directory "${source_dir}" "${target_dir}"
     fi
-  done
+    copy_blockchain_to_user_home_if_needed node_config
+    copy_installer_to_installer_home node_config
+    install_node_with_running_user "${node_config[running_user]}"
+    finish_node_install "${node_config[running_user]}"
 
-  # shellcheck disable=SC2086
-  echo ${install_session_states[*]}
+    echo -e "\n\033[1mInstallation of Service Node ${idx} completed.\033[0m"
+    idx=$((idx + 1))
+  done
+#  echo -e "\033[0;33mPlease DO NOT forget to link a wallet to the new service node! This is done by copy and pasting the command line, obtained during the 'prepare_sn' step, into the wallet. Only then the activation of the service node will be complete and available for staking!\033[0m\n"
+  echo -e "\n\033[1mInstallation completed.\033[0m\n"
+}
+
+setup_all_running_users() {
+  local idx=1
+
+  echo -e "\n\033[0;33mWe may need to create one or more users to run the service node(s). You will be asked to enter a password for these users. Please make sure to keep those passwords safe.\033[0m\n"
+  read -n 1 -s -r -p "Press ANY key to continue"
+
+  while [ "${idx}" -le "${config[nodes]}" ]; do
+    echo -e "\n\033[1mSetting up user '${config["snode${idx}__running_user"]}' to run service node ${idx}...\033[0m\n"
+    setup_running_user "${config["snode${idx}__running_user"]}"
+    idx=$((idx + 1))
+  done
 }
 
 setup_running_user () {
   local running_user="$1"
-#  validate_running_user "$1"
-  create_running_user_if_needed "$1"
-  sudoers_running_user_nopasswd 'add'
+  create_user_if_needed "${running_user}"
+  sudoers_user_nopasswd 'add' "${running_user}"
 }
 
-#validate_running_user() {
-#  local running_user="$1"
-#  echo -e "\n\033[1mValidating user '${running_user}'...\033[0m"
-#
-#  if running_user_has_active_daemon "${running_user}"; then
-#    echo -e "\n\033[0;33mSAFETY POLICY VIOLATION: User '${running_user}' is already running an active service node daemon. Please install with a different user!\033[0m"
-#    echo -e "\nIn case you want to install a second service node on this VPS or server, please use the following command instead:\n\n\033[0;33m    bash install.sh -m\033[0m"
-#    echo -e "\nInstallation aborted."
-#
-#    exit 1
-#  fi
-#}
-
-running_user_has_active_daemon() {
-   [[ "$(sudo ps aux | egrep '[b]in/daemon.*--service-node' | gawk '{ print $1 }' | natsort | uniq | grep -o "^${1}$" | wc -l)" -gt 0 ]]
-}
-
-create_running_user_if_needed() {
-   # shellcheck disable=SC2154
-   if ! id -u "${config[running_user]}" >/dev/null 2>&1; then
-     echo -e "\n\033[1mCreating sudo user '${config[running_user]}' to run service node...\033[0m"
-     echo -e "\n\033[0;33mWe need to create a user '${config[running_user]}' to run the service node. You will be asked to enter a password for this user next. Please make sure to keep this password safe.\033[0m\n"
-     read -n 1 -s -r -p "Press ANY key to continue"
-
-     sudo adduser --gecos GECOS "${config[running_user]}"
-     sudo usermod -aG sudo "${config[running_user]}"
-   fi
-}
-
-sudoers_running_user_nopasswd() {
-  local action="$1"
-  local sudo_settings sed_command
-  [[ "${action}" = 'add' ]] && sudo_settings='ALL=(ALL) NOPASSWD:ALL' || sudo_settings='ALL=(ALL:ALL) ALL'
-  # shellcheck disable=SC2116
-  sed_command="$(echo "/^${config[running_user]} /{h;s/ .*/ ${sudo_settings}/};\${x;/^$/{s//${config[running_user]} ${sudo_settings}/;H};x}")"
-  sudo sed -i "${sed_command}" /etc/sudoers
-}
-
-copy_installer_or_continue_session() {
-  if [[ -d "${installer_home}" ]]; then
-    if [[ -f "${installer_home}/.installsessionstate" ]] && [[ "$(cat "${installer_home}/.installsessionstate")" = "${installer_state[finished_eqsnode_install]}" ]]; then
-      echo -e "\033[0;33mA finished installation of an Equilibria service node has been found! This installation script is ONLY for fresh installations not for updating a service node.\033[0m"
-      exit 0
-    fi
-
-    echo -e "\n\033[1mA previous installation session for user '${config[running_user]}' has been detected with the following config:\033[0m"
-    # Echo install.conf, while skipping #-comment lines
-    cat "${installer_home}/install.conf" | egrep "^[^#].*"
-    echo ""
-
-    while true; do
-      read -p 'Do you want to continue or overwrite this session? (or press ENTER to abort installation) [C/O]: ' co
-      co=${co:-exit}
-
-      case $co in
-            [Cc]* )       break;;
-            [Oo]* )       copy_installer_to_install_user_homedir
-                          break;;
-            quit | exit)  echo -e "\nInstallation aborted."; exit 0 ;;
-            * )           echo -e "(Please answer C or O)";;
-      esac
-    done
-  else
-    copy_installer_to_install_user_homedir
+create_user_if_needed() {
+  local user="$1"
+  # shellcheck disable=SC2154
+  if ! id -u "${user}" >/dev/null 2>&1; then
+    sudo adduser --gecos GECOS "${user}"
+    sudo usermod -aG sudo "${cuser}"
   fi
 }
 
-copy_installer_to_install_user_homedir() {
-  [[ -d "${installer_home}" ]] && echo -e "\033[1mDeleting old installer files...\033[0m" && sudo rm --recursive --force -- "${installer_home}"
-
-  echo -e "\n\033[1mCopying installer to '${installer_home}'...\033[0m"
-  sudo mkdir "${installer_home}"
-  sudo cp eqsnode.sh eqnode.service.template common.sh "${installer_home}"
-  write_install_config_to_install_user_homedir
-  sudo chown -R "${config[running_user]}":root "${installer_home}"
+sudoers_user_nopasswd() {
+  local action="$1"
+  local user="$2"
+  local sudo_settings sed_command
+  [[ "${action}" = 'add' ]] && sudo_settings='ALL=(ALL) NOPASSWD:ALL' || sudo_settings='ALL=(ALL:ALL) ALL'
+  # shellcheck disable=SC2116
+  sed_command="$(echo "/^${user} /{h;s/ .*/ ${sudo_settings}/};\${x;/^$/{s//${user} ${sudo_settings}/;H};x}")"
+  sudo sed -i "${sed_command}" /etc/sudoers
 }
 
-write_install_config_to_install_user_homedir() {
-  local install_file_user_home
-  install_file_user_home="${installer_home}/install.conf"
+generate_node_config() {
+  declare -n node_config="$1"
+  local node_id="$2"
+  node_config=(
+    [node_id]="${node_id}"
+    [install_version]="${config[install_version]}"
+    [git_repository]='https://github.com/EquilibriaCC/Equilibria.git'
+    [running_user]="${config["snode${node_id}__running_user"]}"
+    [p2p_bind_port]="${config["snode${node_id}__p2p_bind_port"]}"
+    [rpc_bind_port]="${config["snode${node_id}__rpc_bind_port"]}"
+    [copy_blockchain]="${config["snode${node_id}__copy_blockchain"]}"
+    [installer_home]="/home/${config["snode${node_id}__running_user"]}/eqnode_installer"
+  )
+}
 
-  echo -e "\n\033[1mGenerating new install.conf in '${install_file_user_home}'...\033[0m"
-  sudo touch "${install_file_user_home}"
+copy_binaries_to_directory(){
+  local source_dir="$1"
+  local target_dir="$2"
 
-  for key in "${!config[@]}"
+  if [[ -d "${target_dir}" ]]; then
+    # move existing bin directory just to be safe
+    mv "${target_dir}" "${target_dir}_$(echo $RANDOM | md5sum | head -c 8)"
+  fi
+  echo -e "\n\033[1mCopying binaries of Service Node 1 to '${target_dir}'.\033[0m"
+  cp -R "${source_dir}" "${target_dir}"
+}
+
+copy_blockchain_to_user_home_if_needed() {
+  declare -n node_config="$1"
+  local source_dir target_dir
+
+  if [[ -d "${node_config[copy_blockchain]}" ]]; then
+    echo -e "Copying blockchain...(TODO)"
+    target_dir="/home/${node_config[running_user]}/.equilibria"
+    cp -R "${node_config[copy_blockchain]}" "${target_dir}"
+    rm "${target_dir}/key" "${target_dir}/equilibria.log"  "${target_dir}/p2pstate.bin"
+  fi
+}
+
+copy_installer_to_installer_home() {
+  declare -n node_config="$1"
+  [[ -d "${node_config[installer_home]}" ]] && echo -e "\033[1mDeleting old installer files...\033[0m" && sudo rm --recursive --force -- "${node_config[installer_home]}"
+
+  echo -e "\n\033[1mCopying installer to '${node_config[installer_home]}'...\033[0m"
+  sudo mkdir "${node_config[installer_home]}"
+  sudo cp eqsnode.sh eqnode.service.template common.sh "${node_config[installer_home]}"
+  write_node_config_to_installer_home node_config
+  sudo chown -R "${node_config[running_user]}":root "${node_config[installer_home]}"
+}
+
+write_node_config_to_installer_home() {
+  declare -n node_config="$1"
+  local install_file_conf_path
+  install_file_conf_path="${node_config[installer_home]}/install.conf"
+
+  echo -e "\n\033[1mGenerating new install.conf in '${install_file_conf_path}'...\033[0m"
+  sudo touch "${install_file_conf_path}"
+
+  for key in "${!node_config[@]}"
   do
-    echo -e "${key}=${config[${key}]}" | sudo tee -a "${install_file_user_home}"
+    echo -e "${key}=${config[${key}]}" | sudo tee -a "${install_file_conf_path}"
   done
 }
 
-install_with_running_user() {
-#  create_install_session_screen_lifeline
-  sudo -H -u "${config[running_user]}" bash -c 'cd ~/eqnode_installer/ && bash eqsnode.sh install'
-#  sudo -H -u "snode" bash -c 'cd ~/eqnode_installer/ && bash eqsnode.sh fakerun'
+install_node_with_running_user() {
+  local running_user="$1"
+  sudo -H -u "${running_user}" bash -c 'cd ~/eqnode_installer/ && bash eqsnode.sh install'
 }
 
-finish_install() {
-  sudoers_running_user_nopasswd 'remove'
-  echo -e "\n\033[1mInstallation of Service Node completed.\033[0m\n"
-  echo -e "\033[0;33mPlease DO NOT forget to link a wallet to the new service node! This is done by copy and pasting the command line, obtained during the 'prepare_sn' step, into the wallet. Only then the activation of the service node will be complete and available for staking!\033[0m\n"
-  su - "${config[running_user]}"
+finish_node_install() {
+  local user="$1"
+  sudoers_running_user_nopasswd 'remove' "${user}"
 }
 
 usage() {
