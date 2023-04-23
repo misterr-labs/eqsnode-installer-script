@@ -45,10 +45,10 @@ cd eqsnode-installer-script
 `bash install.sh -n 2 -u mysnode1,mysnode2 -p p2p:9330+9430,rpc:9331+9431`
 
 ### Install a node using a copy af a specific blockchain
-#### While an existing blockchain is attempted to be auto-detected, it is possible that it cannot find the blockchain or perhaps you want to specify a specific blockchain to use.
+#### While an existing blockchain is attempted to be auto-detected, it is possible that it will not detect a blockchain when there is one, or perhaps you want to specify a specific blockchain to use.
 `bash install.sh --copy-blockchain /home/snode/.equilibria`
 
-#### or if you want to for a fresh blockchain download for each installed node
+#### or if you want a fresh blockchain download for each installed node
 `bash install.sh --copy-blockchain no`
 
 #### Note: usign '--copy-blockchain no' will dramatically increase the installation time when installing multiple nodes
