@@ -45,7 +45,6 @@ main() {
 
   install_checks
   install_manager
-  finish_install
 }
 
 print_splash_screen () {
