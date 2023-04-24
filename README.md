@@ -22,11 +22,11 @@ cd eqsnode-installer-script
 #### Install multiple nodes with just one command:
 
 `bash install.sh --nodes 2`
+#### Suggestion: have a look at the --one-passwd-file option in the Advanced features section
 
 #### Note: while not required it is recommended to inspect the auto-magic behind the scenes first, to double check if everything looks good.
 `bash install.sh --nodes 2 -i`
 <br />
-
 ## Build in help
 #### Run the following to get a list of commands you can use:
 `bash install.sh --help`
@@ -52,6 +52,17 @@ cd eqsnode-installer-script
 `bash install.sh --copy-blockchain no`
 
 #### Note: usign '--copy-blockchain no' will dramatically increase the installation time when installing multiple nodes
+
+### Avoid repeated manual password input for service node users
+#### In case you install multiple nodes with the --nodes option, it can be annoying to input password and re-passwords many times. To avoid this, use below command to set one password a single time and all newly created service node users will use this one password.
+
+`bash install.sh --one-passwd-file`
+
+#### After the .onepasswd file is created you can start an installation like usual. You will not be prompted to enter passwords during the installation.
+#### Note: Future installations will also use this .onepasswd file. In case you want to type in passwords manually again, please remove this file:
+
+`rm ~/eqsnode-installer-script/.onepasswd`
+
 <br /><br />
 
 

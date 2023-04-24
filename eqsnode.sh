@@ -202,7 +202,7 @@ watch_daemon_status() {
   local current_time=
   local delta_time=
 
-  echo -e "\n\033[1mMonitoring blockchain download progress by daemon:\033[0m"
+  echo -e "\n\033[1mMonitoring blockchain download progress by daemon:\033[0m\n"
 
   while true; do
     read blocks_done total_blocks perc <<< "$(~/bin/daemon status ${port_params} | grep -o 'Height:.*' | sed -n 's/^Height: \([0-9]*\)\/\([0-9]*\) (\([0-9.]*\).*/\1 \2 \3/p')"
@@ -228,11 +228,12 @@ watch_daemon_status() {
       start_block=$blocks_done
     fi
 
-    printf "\r\t(%.01f%%) - %d/%d (%s)%-18s" "${perc}" "${blocks_done}" "${total_blocks}" "${estimate_time_remaining}" ""
+    tput cuu1 # put cursor up at beginning of previous line
+    printf "\r\t(%.01f%%) - %d/%d (%s)%-18s\n" "${perc}" "${blocks_done}" "${total_blocks}" "${estimate_time_remaining}" ""
 
     if [[ $blocks_done -eq $total_blocks ]]; then
-      printf "\r\t(%.01f%%) - %d/%d (%s)%-25s" "${perc}" "${blocks_done}" "${total_blocks}" "Completed" ""
-      echo -e "\n"
+      tput cuu1 # put cursor up at beginning of previous line
+      printf "\r\t(%.01f%%) - %d/%d (%s)%-25s\n" "${perc}" "${blocks_done}" "${total_blocks}" "Completed" ""
       break
     fi
     sleep 10 # sleep for 10 seconds

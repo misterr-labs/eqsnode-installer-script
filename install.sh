@@ -16,7 +16,7 @@ command_options_set=(
   [help]=0
   [copy_blockchain]=0
   [inspect_auto_magic]=0
-  [multi_node]=0
+  [one_passwd_file]=0
   [nodes]=0
   [ports]=0
   [user]=0
@@ -56,9 +56,9 @@ SPLASHMSG
 }
 
 install_dependencies() {
-  if ! [[ -x "$(command -v netstat)" && -x "$(command -v natsort)" && -x "$(command -v grep)" && -x "$(command -v getopt)" && -x "$(command -v gawk)" ]]; then
+  if ! [[ -x "$(command -v netstat)" && -x "$(command -v openssl)" && -x "$(command -v natsort)" && -x "$(command -v grep)" && -x "$(command -v getopt)" && -x "$(command -v gawk)" ]]; then
     echo -e "\n\033[1mFixing required dependencies....\033[0m"
-    sudo apt -y install net-tools python3-natsort grep util-linux gawk
+    sudo apt -y install net-tools openssl python3-natsort grep util-linux gawk
   fi
 }
 
@@ -69,7 +69,7 @@ process_command_line_args() {
 }
 
 parse_command_line_args() {
-  args="$(getopt -a -n installer -o "himc:n:p:u:v:" --long help,inspect-auto-magic,copy-blockchain:,nodes:,ports:,user:,version: -- "$@")"
+  args="$(getopt -a -n installer -o "hioc:n:p:u:v:" --long help,inspect-auto-magic,one-passwd-file,copy-blockchain:,nodes:,ports:,user:,version: -- "$@")"
   eval set -- "${args}"
 
   while :
@@ -79,6 +79,7 @@ parse_command_line_args() {
       -c | --copy-blockchain)       command_options_set[copy_blockchain]=1; copy_blockchain_option_value="$2"; shift 2 ;;
       -i | --inspect-auto-magic)    command_options_set[inspect_auto_magic]=1; shift ;;
       -n | --nodes)                 command_options_set[nodes]=1; nodes_option_value="$2"; shift 2 ;;
+      -o | --one-passwd-file)       command_options_set[one_passwd_file]=1; shift 1 ;;
       -p | --ports)                 command_options_set[ports]=1; ports_option_value="$2"; shift 2 ;;
       -u | --user)                  command_options_set[user]=1; user_option_value="$2"; shift 2 ;;
       -v | --version)               command_options_set[version]=1; version_option_value="$2"; shift 2 ;;
@@ -92,6 +93,7 @@ parse_command_line_args() {
 
 set_config_and_execute_info_commands() {
   [[ "${command_options_set[help]}" -eq 1 ]] && usage && exit 0
+  [[ "${command_options_set[one_passwd_file]}" -eq 1 ]] && one_password_file_option_handler && exit 0
 
   # set options first that effect other options and the parsing of their option value(s)
   if [[ "${command_options_set[nodes]}" -eq 1 ]]; then nodes_option_handler "${nodes_option_value}"; else nodes_option_handler 1; fi
@@ -117,6 +119,7 @@ validate_parsed_command_line_args() {
     "<no_options_set>"
     "copy_blockchain nodes ports user skip_prepare_sn version"
     "inspect_auto_magic nodes"
+    "one_passwd_file"
     "help"
   )
   command_options_set_string="$(generate_set_options_string)"
@@ -285,7 +288,6 @@ validate_manual_users_and_set_config_if_valid() {
   local usernames idx
   read -a usernames <<< "${1//,/ }"
 
-#  echo "${usernames[@]}"
   idx=1
   for username in "${usernames[@]}"
   do
@@ -302,6 +304,7 @@ validate_manual_users_and_set_config_if_valid() {
     idx=$((idx + 1))
   done
 }
+
 running_user_has_active_daemon() {
    [[ "$(sudo ps aux | egrep '[b]in/daemon.*--service-node' | gawk '{ print $1 }' | natsort | uniq | grep -o "^${1}$" | wc -l)" -gt 0 ]]
 }
@@ -476,10 +479,11 @@ install_manager() {
 
 setup_all_running_users() {
   local idx=1
-
-  echo -e "\n\033[0;33mWe may need to create one or more users to run the service node(s). You will be asked to enter a password for these users. Please make sure to keep those passwords safe.\033[0m\n"
-  read -n 1 -s -r -p "Press ANY key to continue"
-  echo -e "\n"
+  if ! [[ -f "${script_basedir}/.onepasswd" ]]; then
+    echo -e "\n\033[0;33mWe may need to create one or more users to run the service node(s). You will be asked to enter a password for these users. Please make sure to keep those passwords safe.\033[0m\n"
+    read -n 1 -s -r -p "Press ANY key to continue"
+    echo -e "\n"
+  fi
 
   while [ "${idx}" -le "${config[nodes]}" ]; do
     echo -e "\n\033[1mSetting up user '${config["snode${idx}__running_user"]}' to run service node ${idx}...\033[0m\n"
@@ -498,7 +502,12 @@ create_user_if_needed() {
   local user="$1"
   # shellcheck disable=SC2154
   if ! id -u "${user}" >/dev/null 2>&1; then
-    sudo adduser --gecos GECOS "${user}"
+    if [[ -f "${script_basedir}/.onepasswd" ]]; then
+      sudo adduser --disabled-password --gecos "${user}" "${user}"
+      sudo usermod -p "$(cat "${script_basedir}/.onepasswd")" "${user}"
+    else
+      sudo adduser --gecos "${user}" "${user}"
+    fi
     sudo usermod -aG sudo "${user}"
   fi
 }
@@ -589,6 +598,17 @@ finish_node_install() {
   sudoers_user_nopasswd 'remove' "${user}"
 }
 
+one_password_file_option_handler() {
+  echo -e "\n\033[1mSet one password for all new service node users. Will be stored encrypted!\033[0m"
+  $(while true; do read -sp $'\rPassword: ' pwd; read -sp $'\rRe-passwd: ' re_pwd; [[ "${pwd}" = "${re_pwd}" ]] && echo "${pwd}" && break; done | openssl passwd -1 -stdin > .onepasswd )
+
+  if [[ -f "${script_basedir}/.onepasswd" ]]; then
+    echo -e "\n\nsucces: .onepasswd file created. Remove this file to enable manual password input again."
+  else
+    echo -e "\n\nerror: .onepasswd file could not be created"
+  fi
+}
+
 print_config() {
   echo -e "\n"
   local keys=( $( echo ${!config[@]} | tr ' ' $'\n' | natsort) )
@@ -604,13 +624,14 @@ usage() {
 bash $0 [OPTIONS...]
 
 Options:
-  -c --copy-blockchain [no|auto|path]   Copy a previously downloaded blockchain if present on
-                                        VPS or server for fast installation. Set 'auto' for
-                                        auto-detect (default). Set a .equilibria directory or
-                                        'no' to force a fresh download of the blockchain. Use
-                                        'no,auto' when the first node should download a fresh
-                                        blockchain, while subsequent node installations should
-                                        copy this fresh blockchain download.
+  -c --copy-blockchain [no|auto|path]   Copy a previously downloaded blockchain if present
+                                        on VPS or server for fast installation. Set 'auto'
+                                        for auto-detect (default). Set a .equilibria
+                                        directory or 'no' to force a fresh download of the
+                                        blockchain. Use 'no,auto' when the first node
+                                        should download a fresh blockchain, while subsequent
+                                        node installations should copy this fresh blockchain
+                                        download.
 
                                         Examples: --copy-blockchain auto
                                                   --copy-blockchain /home/snode/.equilibria
@@ -634,6 +655,13 @@ Options:
                                         nodes to be active.
                                         Example:  --ports auto
 
+  -o --one-passwd-file                  Generate a one password file, that contains an
+                                        encrypted password, which will be used as password
+                                        for all service nodes users that will be created.
+                                        Now and in the future the future, until the .onepwd
+                                        file is deleted. Run 'bash $0 --one-passwd-file'
+                                        before 'bash $0' for a non-interactive installation
+                                        of the service node.
   -u --user [auto|name,...]             Set username that will run the service node or
                                         'auto' for autodetect. In case --nodes option is
                                         set you can add multiple usernames comma separated.
