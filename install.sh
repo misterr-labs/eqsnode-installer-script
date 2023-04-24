@@ -317,6 +317,7 @@ ports_option_handler() {
   else
     echo -e "\033[0;33merror: Invalid --ports config format '$1'\033[0m\n"
     usage
+    exit 1
   fi
 }
 
