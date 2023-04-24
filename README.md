@@ -54,7 +54,7 @@ cd eqsnode-installer-script
 #### Note: usign '--copy-blockchain no' will dramatically increase the installation time when installing multiple nodes
 
 ### Avoid repeated manual password input for service node users
-#### In case you install multiple nodes with the --nodes option, it can be annoying to input password and re-passwords many times. To avoid this, use below command to set one password a single time and all newly created service node users will use this one password.
+#### In case you install multiple nodes with the --nodes option, it can be annoying to input password and re-passwords many times. To avoid this, use below command to set one password a single time and all newly created service node users will use this one password (stored encrypted).
 
 `bash install.sh --one-passwd-file`
 
