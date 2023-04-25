@@ -1,6 +1,6 @@
 #! /bin/env bash
 # v1.0 developed by GreggyGB
-# v2.0-v4.0 by Mister R
+# v2.0-v5.x by Mister R
 
 set -o errexit
 set -o nounset
@@ -41,7 +41,7 @@ main() {
     log )           log ;;
     update )        update ;;
     fakerun )       sleep 300 ;;
-#    fork_update ) fork_update ;;
+    fork_update )   fork_update ;;
     print_sn_key )  print_sn_key ;;
     * ) usage
   esac
@@ -111,7 +111,7 @@ checkout_git_repo() {
 
   if [ "${config[install_version]}" = 'auto' ]; then
     echo -e "\033[1mRetrieving latest version tag from Github...\033[0m"
-    config[install_version]="$(git ls-remote --tags "${config[git_repository]}" | grep -o 'v.*' | sort -V | tail -1)"
+    config[install_version]="$(get_latest_equilibria_version_number)"
   fi
   echo -e "\n\033[1mChecking Out Equilibra Repository Files...\033[0m"
   git clone --recursive "${config[git_repository]}" equilibria && cd equilibria
@@ -275,18 +275,24 @@ print_sn_key() {
   ~/bin/daemon print_sn_key ${port_params}
 }
 
-#fork_update() {
-#  rm -Rf "${script_basedir}/equilibria"
-#  git clone --recursive "${config[git_repository]}" equilibria && cd equilibria
-#  git submodule init && git submodule update
-#  git checkout "${config[install_version]}"
-#  make
-#  sudo systemctl stop "${service_name}"
-#  rm -r ~/bin
-#  cd build/Linux/_HEAD_detached_at_"${config[install_version]}"_/release && mv bin ~/
-#  sudo systemctl enable "${service_name}"
-#  sudo systemctl start "${service_name}"
-#}
+fork_update() {
+  echo "Disabled feature"
+  exit 0
+
+  config[install_version]="$(get_latest_equilibria_version_number)"
+  echo -e "\033[1mRetrieving latest version tag from Github...\033[0m"
+
+  rm -Rf "${script_basedir}/equilibria"
+  git clone --recursive "${config[git_repository]}" equilibria && cd equilibria
+  git submodule init && git submodule update
+  git checkout "${config[install_version]}"
+  make
+  sudo systemctl stop "${service_name}"
+  rm -r ~/bin
+  cd build/Linux/_HEAD_detached_at_"${config[install_version]}"_/release && mv bin ~/
+  sudo systemctl enable "${service_name}"
+  sudo systemctl start "${service_name}"
+}
 
 usage() {
   cat <<USAGEMSG

@@ -1,4 +1,4 @@
-eqnode_installer_version='v5.0.1'
+eqnode_installer_version='v5.0.2'
 readonly eqnode_installer_version
 
 version_regex="^v[0-9]+.[0-9]+.[0-9]+$"
@@ -12,11 +12,13 @@ readonly config_file
 
 typeset -A config
 config=(
-  [nodes]=
+  [nodes]=1
   [install_version]='auto'
   [running_user]='snode'
   [required_cmake_version]='3.18'
   [git_repository]='https://github.com/EquilibriaCC/Equilibria.git'
+  [p2p_bind_port]=9230
+  [rpc_bind_port]=9231
 )
 
 typeset -A installer_state
@@ -70,7 +72,7 @@ default_ports_configured() {
 }
 
 get_latest_equilibria_version_number() {
-  git ls-remote --tags "${config[git_repository]}" | grep -o 'v.*' | sort -V | tail -1
+  git ls-remote --tags "${config[git_repository]}" 2>/dev/null | grep -o 'v.*' | sort -V | tail -1
 }
 
 version2num() {
