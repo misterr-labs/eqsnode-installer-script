@@ -117,7 +117,7 @@ validate_parsed_command_line_args() {
 
   friendly_option_groupings=(
     "<no_options_set>"
-    "copy_blockchain nodes ports user skip_prepare_sn version"
+    "copy_blockchain nodes ports user version"
     "inspect_auto_magic nodes"
     "one_passwd_file"
     "help"
