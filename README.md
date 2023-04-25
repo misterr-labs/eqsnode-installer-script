@@ -1,62 +1,71 @@
 # Equilibria service node easy setup guide
 
-## Download this script from Github (in homedir root)
-### Important: Service node will not run under root by default. A new user will automatically be created to run the service!
+## Pull this script from Github (as root)
+#### As root? Yes, but do not worry! While the script needs to be run as root, the script will automatically create users that will run the service node(s).
+```
+cd ~
+sudo apt -y install git
+git clone https://github.com/misterr-labs/eqsnode-installer-script
+cd eqsnode-installer-script
+```
 
-`cd ~`
-
-`git clone https://github.com/misterr-labs/eqsnode-installer-script`
-
-`cd eqsnode-installer-script`
-
-## Installation of a single service node (first node on VPS or server)
-#### Note: run root user (or sudo user)
-
+## Installation of a service node
 `bash install.sh`
--
-<br />
 
-## Multi service node installation (one VPS or server)
-#### Note: run root user (or sudo user)
 
-`bash install.sh -m`
--
-or
--
-`bash install.sh --user auto`
--
-### IMPORTANT: 
-#### Do not start another multi-node install until the first installation session at least progressed till the point where it starts downloading the blockchain. This way the auto-magic port and username functionality works as expected! If you don't like waiting, please have a look at the advanced features below to set the ports and username manually. However, please avoid overloading the server or VPS by running too many installation sessions at the same time.
-<br />
-
-### Inspect auto-magic (not a required step)
-`bash install.sh --inspect-auto-magic`
--
-#### Or use the shorthand version
+#### While not required it is recommended to inspect the auto-magic behind the scenes first.
 
 `bash install.sh -i`
-<br />
 
-## Build in help
-`bash install.sh --help`
--
+## Multi service node installation (one VPS or server)
+
+#### Install multiple nodes with just one command:
+
+`bash install.sh --nodes 2`
+#### Suggestion: have a look at the --one-passwd-file option in the Advanced features section
+
+#### Note: while not required it is recommended to inspect the auto-magic behind the scenes first, to double check if everything looks good.
+`bash install.sh --nodes 2 -i`
 <br />
+## Build in help
+#### Run the following to get a list of commands you can use:
+`bash install.sh --help`
 
 ## Advanced features
 
-### To install a 'multi-node' with a specific username. Auto-ports feature is enabled by default.
+### To install a node with a specific username. 
+#### (note: the auto-ports feature is enabled by default)
+
 `bash install.sh --user mysnode10`
 
-#### Or use the shorthand version
-`bash install.sh -u mysnode10`
-
-### To install a 'multi-node' with specific username and manual ports config
-`bash install.sh --user mysnode10 --ports p2p:10330,rpc:10331,zmq:10332`
+### Install multi-nodes with specific usernames and manual ports configs
+`bash install.sh --nodes 2 --user mysnode1,mysnode2 --ports p2p:9330+9430,rpc:9331+9431`
 
 #### Or use the shorthand version
-`bash install.sh -u mysnode10 -p p2p:10330,rpc:10331,zmq:10332`
+`bash install.sh -n 2 -u mysnode1,mysnode2 -p p2p:9330+9430,rpc:9331+9431`
 
-## After install (NOT A REQUIRED STEP)
+### Install a node using a copy af a specific blockchain
+#### While an existing blockchain is attempted to be auto-detected, it is possible that it will not detect a blockchain when there is one, or perhaps you want to specify a specific blockchain to use.
+`bash install.sh --copy-blockchain /home/snode/.equilibria`
 
-### Run the following to get a list of commands you can use
-`bash eqsnode.sh --help`
+#### Or if you want a fresh blockchain download for each installed node
+`bash install.sh --copy-blockchain no`
+
+#### Or first node a fresh blockchain download, while the remaining nodes to install a copy of the first
+`bash install.sh --nodes 3 --copy-blockchain no,auto`
+
+#### Note: using '--copy-blockchain no' will dramatically increase the installation time when installing multiple nodes
+
+### Avoid repeated manual password input for service node users
+#### In case you install multiple nodes with the --nodes option, it can be annoying to input password and re-passwords many times. To avoid this, use below command to set one password a single time and all newly created service node users will use this one password (stored encrypted).
+
+`bash install.sh --one-passwd-file`
+
+#### After the .onepasswd file is created you can start an installation like usual. You will not be prompted to enter passwords during the installation.
+#### Note: Future installations will also use this .onepasswd file. In case you want to type in passwords manually again, please remove this file:
+
+`rm ~/eqsnode-installer-script/.onepasswd`
+
+<br /><br />
+
+
