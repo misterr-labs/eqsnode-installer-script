@@ -48,10 +48,13 @@ cd eqsnode-installer-script
 #### While an existing blockchain is attempted to be auto-detected, it is possible that it will not detect a blockchain when there is one, or perhaps you want to specify a specific blockchain to use.
 `bash install.sh --copy-blockchain /home/snode/.equilibria`
 
-#### or if you want a fresh blockchain download for each installed node
+#### Or if you want a fresh blockchain download for each installed node
 `bash install.sh --copy-blockchain no`
 
-#### Note: usign '--copy-blockchain no' will dramatically increase the installation time when installing multiple nodes
+#### Or first node a fresh blockchain download, while the remaining nodes to install a copy of the first
+`bash install.sh --nodes 3 --copy-blockchain no,auto`
+
+#### Note: using '--copy-blockchain no' will dramatically increase the installation time when installing multiple nodes
 
 ### Avoid repeated manual password input for service node users
 #### In case you install multiple nodes with the --nodes option, it can be annoying to input password and re-passwords many times. To avoid this, use below command to set one password a single time and all newly created service node users will use this one password (stored encrypted).

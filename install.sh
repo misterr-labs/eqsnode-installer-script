@@ -267,6 +267,17 @@ inspect_auto_magic_option_handler() {
   echo -e "    bash install.sh --copy_blockchain no\033[0m\n"
 }
 
+one_password_file_option_handler() {
+  echo -e "\n\033[1mSet one password for all new service node users. Will be stored encrypted!\033[0m"
+  $(while true; do read -sp $'\rPassword: ' pwd; read -sp $'\rRe-passwd: ' re_pwd; [[ "${pwd}" = "${re_pwd}" ]] && echo "${pwd}" && break; done | openssl passwd -1 -stdin > .onepasswd )
+
+  if [[ -f "${script_basedir}/.onepasswd" ]]; then
+    echo -e "\n\nsucces: .onepasswd file created. Remove this file to enable manual password input again."
+  else
+    echo -e "\n\nerror: .onepasswd file could not be created"
+  fi
+}
+
 user_option_handler() {
   if [[ "$1" = "auto" ]]; then
     auto_search_available_username
@@ -474,17 +485,13 @@ install_manager() {
     echo -e "\n\033[1mInstallation of Service Node ${idx} completed.\033[0m"
     idx=$((idx + 1))
   done
-  echo -e "\n\033[0;33mPlease DO NOT forget to link a wallet to the new service node! This is done by copy and pasting the command line, obtained during the 'prepare_sn' step, into the wallet. Only then the activation of the service node will be complete and available for staking!\033[0m\n"
+  next_steps
+
   echo -e "\n\033[1mInstallation completed.\033[0m\n"
 }
 
 setup_all_running_users() {
   local idx=1
-  if ! [[ -f "${script_basedir}/.onepasswd" ]]; then
-    echo -e "\n\033[0;33mWe may need to create one or more users to run the service node(s). You will be asked to enter a password for these users. Please make sure to keep those passwords safe.\033[0m\n"
-    read -n 1 -s -r -p "Press ANY key to continue"
-    echo -e "\n"
-  fi
 
   while [ "${idx}" -le "${config[nodes]}" ]; do
     echo -e "\n\033[1mSetting up user '${config["snode${idx}__running_user"]}' to run service node ${idx}...\033[0m\n"
@@ -599,16 +606,21 @@ finish_node_install() {
   sudoers_user_nopasswd 'remove' "${user}"
 }
 
-one_password_file_option_handler() {
-  echo -e "\n\033[1mSet one password for all new service node users. Will be stored encrypted!\033[0m"
-  $(while true; do read -sp $'\rPassword: ' pwd; read -sp $'\rRe-passwd: ' re_pwd; [[ "${pwd}" = "${re_pwd}" ]] && echo "${pwd}" && break; done | openssl passwd -1 -stdin > .onepasswd )
+next_steps() {
+  tput rev; echo -e "\n\033[1m IMPORTANT: LAST STEPS TO COMPLETE A WORKING SERVICE NODE \033[0m"; tput sgr0
+  echo -e "\nIn order to complete the installation of a service node, you need to link a wallet to each node as operator."
+  echo -e "The following command(s) will get you started."
+  echo -e "\n\033[0;33m(Run command(s) and read the presented instructions carefully)\033[0m"
+  local idx=1
 
-  if [[ -f "${script_basedir}/.onepasswd" ]]; then
-    echo -e "\n\nsucces: .onepasswd file created. Remove this file to enable manual password input again."
-  else
-    echo -e "\n\nerror: .onepasswd file could not be created"
-  fi
+  while [ "${idx}" -le "${config[nodes]}" ]; do
+    echo -e "\nService Node ${idx}:"
+    echo -e "\033[1msudo -H -u "${config[snode${idx}__running_user]}" bash -c 'cd ~/eqnode_installer/ && bash eqsnode.sh prepare_sn'\033[0m"
+
+    idx=$((idx + 1))
+  done
 }
+
 
 print_config() {
   echo -e "\n"
@@ -643,8 +655,6 @@ Options:
                                         users and Equilibria version
   -n --nodes [number]                   Number of nodes to install. If --nodes option is
                                         not specified, then only one node will be installed.
-                                        If --nodes is to number > 1, then '--user auto' is
-                                        used by default.
   -p  --ports [auto|config]             Set port configuration. Format:
                                         p2p:<port[+port+...]>,rpc:<port[+port+...]>
 
@@ -659,10 +669,10 @@ Options:
   -o --one-passwd-file                  Generate a one password file, that contains an
                                         encrypted password, which will be used as password
                                         for all service nodes users that will be created.
-                                        Now and in the future the future, until the .onepwd
-                                        file is deleted. Run 'bash $0 --one-passwd-file'
-                                        before 'bash $0' for a non-interactive installation
-                                        of the service node.
+                                        Now and in the future, until the .onepwd file is
+                                        deleted. Run 'bash $0 --one-passwd-file'
+                                        before 'bash $0' for a non-interactive
+                                        installation of the service node.
   -u --user [auto|name,...]             Set username that will run the service node or
                                         'auto' for autodetect. In case --nodes option is
                                         set you can add multiple usernames comma separated.
