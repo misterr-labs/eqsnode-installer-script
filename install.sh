@@ -569,8 +569,9 @@ copy_blockchain_to_user_home_if_needed() {
       # move existing .equilibria directory just to be safe
       mv "${target_dir}" "${target_dir}_$(echo $RANDOM | md5sum | head -c 8)"
     fi
-    sudo cp -R "${node_config_ref[copy_blockchain]}" "${target_dir}"
-    sudo rm -f "${target_dir}/key" "${target_dir}/equilibria.log" "${target_dir}/p2pstate.bin" 2>/dev/null
+    sudo mkdir "${target_dir}"
+    sudo chmod "$(stat --format '%a' "${node_config_ref[copy_blockchain]}")" "$target_dir"
+    sudo cp -R "${node_config_ref[copy_blockchain]}/lmdb" "${target_dir}"
     sudo chown -R "${node_config_ref[running_user]}":"${node_config_ref[running_user]}" "${target_dir}"
   fi
 }

@@ -15,10 +15,12 @@ discover_daemons() {
   declare -n result="$1"
   local output_column="$2"
   local idx=0
+
+  # grep bin/xeq.* as well to detect daemons renamed to xeq# by GreggyGB's script
   while read -r line; do
     result[${idx}]="${line}"
     idx=$((idx + 1))
-  done <<< "$(sudo ps -f -o "${output_column}" -o args -ax | grep '[b]in/daemon.*--service-node' | gawk '{ print $1 }' | natsort | uniq )"
+  done <<< "$(sudo ps -f -o "${output_column}" -o args -ax | grep -e '[b]in/daemon.*--service-node' -e '[b]in/xeq.*--service-node' | gawk '{ print $1 }' | natsort | uniq )"
 
   return 0
 }
