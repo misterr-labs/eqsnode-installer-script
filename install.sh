@@ -551,10 +551,10 @@ copy_binaries_to_directory(){
 
   if [[ -d "${target_dir}" ]]; then
     # move existing bin directory just to be safe
-    mv "${target_dir}" "${target_dir}_$(echo $RANDOM | md5sum | head -c 8)"
+    sudo mv "${target_dir}" "${target_dir}_$(echo $RANDOM | md5sum | head -c 8)"
   fi
   echo -e "\n\033[1mCopying binaries of Service Node 1 to '${target_dir}'.\033[0m"
-  cp -R "${source_dir}" "${target_dir}"
+  sudo cp -R "${source_dir}" "${target_dir}"
 }
 
 copy_blockchain_to_user_home_if_needed() {
@@ -567,7 +567,7 @@ copy_blockchain_to_user_home_if_needed() {
 
     if [[ -d "${target_dir}" ]]; then
       # move existing .equilibria directory just to be safe
-      mv "${target_dir}" "${target_dir}_$(echo $RANDOM | md5sum | head -c 8)"
+      sudo mv "${target_dir}" "${target_dir}_$(echo $RANDOM | md5sum | head -c 8)"
     fi
     sudo mkdir "${target_dir}"
     sudo chmod "$(stat --format '%a' "${node_config_ref[copy_blockchain]}")" "$target_dir"
