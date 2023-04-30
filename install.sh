@@ -159,7 +159,7 @@ nodes_option_handler() {
   fi
 
   max_nodes_by_free_space="$((system_info[free_space_home_mount] / 1024 / 50000))"
-  max_nodes_by_memory="$((system_info[memory] / 1024 / 4000))"
+  max_nodes_by_memory="$((system_info[memory] / 1024 / 2600))"
   [[ "${max_nodes_by_memory}" -gt "$max_nodes_by_free_space" ]] && max_nodes="${max_nodes_by_memory}" || max_nodes="${max_nodes_by_free_space}"
 
   if [[ "$1" -gt "${max_nodes}" ]]; then
@@ -487,7 +487,7 @@ install_manager() {
   done
   next_steps
 
-  echo -e "\n\033[1mInstallation completed.\033[0m\n"
+  echo -e "\n\033[1mGoodbye!\033[0m\n"
 }
 
 setup_all_running_users() {
@@ -608,7 +608,7 @@ finish_node_install() {
 }
 
 next_steps() {
-  tput rev; echo -e "\n\033[1m IMPORTANT: LAST STEPS TO COMPLETE A WORKING SERVICE NODE \033[0m"; tput sgr0
+  tput rev; echo -e "\n\033[1m IMPORTANT: READ THE LAST STEPS TO COMPLETE A WORKING SERVICE NODE BELOW\033[0m"; tput sgr0
   echo -e "\nIn order to complete the installation of a service node, you need to link a wallet to each node as operator."
   echo -e "The following command(s) will get you started."
   echo -e "\n\033[0;33m(Run command(s) and read the presented instructions carefully)\033[0m"
