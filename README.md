@@ -8,6 +8,11 @@ sudo apt -y install git
 git clone https://github.com/misterr-labs/eqsnode-installer-script
 cd eqsnode-installer-script
 ```
+#### Already pulled this script from Github before? Update it to the latest version:
+```
+cd ~/eqsnode-installer-script
+git pull
+```
 
 ## Installation of a service node
 `bash install.sh`
