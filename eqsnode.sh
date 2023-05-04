@@ -105,7 +105,7 @@ checkout_git_repo() {
   set_install_session_state "${installer_state[checkout_git]}"
 
   if [[ -d "${install_root_bin_dir}/bin" ]]; then
-    echo -e "\n\033[1mSkipped checked out Equilibria git repo, using existing binaries...\033[0m\n"
+    echo -e "\n\033[1mSkipped checked out Equilibria git repo, using existing binaries...\033[0m"
     return 0
   fi
 
@@ -123,7 +123,7 @@ compile_and_move_binaries() {
   set_install_session_state "${installer_state[compile_move]}"
 
   if [[ -d "${install_root_bin_dir}/bin" ]]; then
-    echo -e "\n\033[1mSkipped compiling Equilibria binaries, using existing binaries...\033[0m\n"
+    echo -e "\n\033[1mSkipped compiling Equilibria binaries, using existing binaries...\033[0m"
     return 0
   fi
 

@@ -480,7 +480,7 @@ upgrade_cmake_if_needed() {
 
   # skip upgrade cmake when we do not need the compile binaries
   if [[ "${command_options_set[copy_binaries]}" -eq 1 ]]; then
-    echo -e "\n\033[1mSkipping cmake upgrade checks, using existing binaries...\033[0m\n"
+    echo -e "\n\033[1mSkipping cmake upgrade checks, using existing binaries...\033[0m"
     return 0
   fi
 
@@ -595,7 +595,7 @@ copy_binaries_to_directory(){
     # move existing bin directory just to be safe
     sudo mv "${target_dir}" "${target_dir}_$(echo $RANDOM | md5sum | head -c 8)"
   fi
-  echo -e "\n\033[1mCopying binaries of Service Node 1 to '${target_dir}'.\033[0m"
+  echo -e "\n\033[1mCopying binaries from '${source_dir}' to '${target_dir}'.\033[0m"
   sudo cp -R "${source_dir}" "${target_dir}"
 }
 
