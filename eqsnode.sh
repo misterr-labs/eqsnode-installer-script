@@ -104,8 +104,8 @@ install_required_packages() {
 checkout_git_repo() {
   set_install_session_state "${installer_state[checkout_git]}"
 
-  if [[ "${config[node_id]}" -gt 1 && -d "${install_root_bin_dir}" ]]; then
-    echo -e "\n\033[1mSkipped checked out Equilibria git repo, already have binaries from Service Node 1...\033[0m"
+  if [[ -d "${install_root_bin_dir}/bin" ]]; then
+    echo -e "\n\033[1mSkipped checked out Equilibria git repo, using existing binaries...\033[0m"
     return 0
   fi
 
@@ -122,8 +122,8 @@ checkout_git_repo() {
 compile_and_move_binaries() {
   set_install_session_state "${installer_state[compile_move]}"
 
-  if [[ "${config[node_id]}" -gt 1 && -d "${install_root_bin_dir}" ]]; then
-    echo -e "\n\033[1mSkipped compiling Equilibria binaries, already have binaries from Service Node 1...\033[0m"
+  if [[ -d "${install_root_bin_dir}/bin" ]]; then
+    echo -e "\n\033[1mSkipped compiling Equilibria binaries, using existing binaries...\033[0m"
     return 0
   fi
 

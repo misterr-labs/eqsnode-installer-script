@@ -15,6 +15,7 @@ typeset -A command_options_set
 command_options_set=(
   [help]=0
   [copy_blockchain]=0
+  [copy_binaries]=0
   [inspect_auto_magic]=0
   [one_passwd_file]=0
   [nodes]=0
@@ -22,6 +23,7 @@ command_options_set=(
   [user]=0
   [version]=0
 )
+copy_binaries_option_value=
 copy_blockchain_option_value=
 nodes_option_value=
 ports_option_value=
@@ -69,13 +71,14 @@ process_command_line_args() {
 }
 
 parse_command_line_args() {
-  args="$(getopt -a -n installer -o "hioc:n:p:u:v:" --long help,inspect-auto-magic,one-passwd-file,copy-blockchain:,nodes:,ports:,user:,version: -- "$@")"
+  args="$(getopt -a -n installer -o "hiob:c:n:p:u:v:" --long help,inspect-auto-magic,one-passwd-file,copy-binaries:,copy-blockchain:,nodes:,ports:,user:,version: -- "$@")"
   eval set -- "${args}"
 
   while :
   do
     case "$1" in
       -h | --help)                  command_options_set[help]=1 ; shift ;;
+      -b | --copy-binaries)         command_options_set[copy_binaries]=1; copy_binaries_option_value="$2"; shift 2 ;;
       -c | --copy-blockchain)       command_options_set[copy_blockchain]=1; copy_blockchain_option_value="$2"; shift 2 ;;
       -i | --inspect-auto-magic)    command_options_set[inspect_auto_magic]=1; shift ;;
       -n | --nodes)                 command_options_set[nodes]=1; nodes_option_value="$2"; shift 2 ;;
@@ -106,6 +109,7 @@ set_config_and_execute_info_commands() {
   if [[ "${command_options_set[ports]}" -eq 1 ]]; then ports_option_handler "${ports_option_value}"; else ports_option_handler "auto"; fi
   if [[ "${command_options_set[user]}" -eq 1 ]]; then user_option_handler "${user_option_value}"; else user_option_handler "auto"; fi
   if [[ "${command_options_set[copy_blockchain]}" -eq 1 ]]; then copy_blockchain_option_handler "${copy_blockchain_option_value}"; else copy_blockchain_option_handler "auto"; fi
+  if [[ "${command_options_set[copy_binaries]}" -eq 1 ]]; then copy_binaries_option_handler "${copy_binaries_option_value}"; fi
 
   # necessary return 0
   return 0
@@ -117,7 +121,7 @@ validate_parsed_command_line_args() {
 
   friendly_option_groupings=(
     "<no_options_set>"
-    "copy_blockchain nodes ports user version"
+    "copy_blockchain copy_binaries nodes ports user version"
     "inspect_auto_magic nodes"
     "one_passwd_file"
     "help"
@@ -173,12 +177,37 @@ nodes_option_handler() {
   while [ "${idx}" -le "${config[nodes]}" ]; do
     config["snode${idx}__running_user"]=
     config["snode${idx}__copy_blockchain"]=
+    config["snode${idx}__copy_binaries"]=
     config["snode${idx}__p2p_bind_port"]=0
     config["snode${idx}__rpc_bind_port"]=0
     idx=$((idx + 1))
   done
 
   return 0
+}
+
+copy_binaries_option_handler() {
+  local fixed_value binaries_version
+  local idx=1
+  local option_value="$1"
+
+  if [[ -f "${option_value}/daemon" ]]; then
+      binaries_version="$("${option_value}"/daemon --version | grep -oP '(?<=\()+v[0-9.]+')"
+
+      # if version option is set to a specific version or auto (already resolved to latest version), check if daemon version matches this version
+      if [[ "${command_options_set[version]}" -eq 1 && "${config[install_version]}" != "${binaries_version}" ]]; then
+        echo -e "\n\033[0;33merror: ${option_value}/daemon version '${binaries_version}' does not match version '${config[install_version]}'\033[0m\n"
+        exit 1
+      fi
+
+      while [ "${idx}" -le "${config[nodes]}" ]; do
+        config["snode${idx}__copy_binaries"]="${option_value}"
+        idx=$((idx + 1))
+      done
+  else
+    echo -e "\n\033[0;33merror: daemon not found in --copy-binaries directory '$1'\033[0m\n"
+    exit 1
+  fi
 }
 
 copy_blockchain_option_handler() {
@@ -225,7 +254,7 @@ version_option_handler() {
   if [[ "$1" = "auto" ]]; then
     echo -e "\n\033[1mAuto-detecting latest Equilibria version...\033[0m"
     config[install_version]="$(get_latest_equilibria_version_number)"
-  elif [[ "$1" =~ $version_regex} ]]; then
+  elif [[ "$1" =~ ${version_regex} ]]; then
     config[install_version]="$1"
     echo -e "\n\033[1mInstalling manually set Equilibria version:\033[0m"
   else
@@ -449,6 +478,12 @@ inspect_time_services () {
 upgrade_cmake_if_needed() {
   local current_cmake_version
 
+  # skip upgrade cmake when we do not need the compile binaries
+  if [[ "${command_options_set[copy_binaries]}" -eq 1 ]]; then
+    echo -e "\n\033[1mSkipping cmake upgrade checks, using existing binaries...\033[0m"
+    return 0
+  fi
+
   [[ -x "$(command -v cmake)" ]] && current_cmake_version="$(cmake --version | awk 'NR==1 { print $3  }')" || current_cmake_version='not installed'
 
   if [[ "${system_info[distro]}" = "ubuntu" && ( "${current_cmake_version}" = 'not installed' || "$(version2num "${current_cmake_version}")" -lt "$(version2num "${config[required_cmake_version]}")" ) ]]; then
@@ -472,7 +507,13 @@ install_manager() {
   while [ "${idx}" -le "${config[nodes]}" ]; do
     generate_node_config node_config "${idx}"
 
-    if [[ "${idx}" -gt 1 ]]; then
+    # if existing binaries directory is set, copy these for the first node
+    if [[ "${idx}" -eq 1 && "${node_config[copy_binaries]}" != "" ]]; then
+       target_dir="/home/${config["snode1__running_user"]}/bin"
+       copy_binaries_to_directory "${node_config[copy_binaries]}" "${target_dir}"
+
+    # for second and subsequent nodes, copy binaries from first node
+    elif [[ "${idx}" -gt 1 ]]; then
       source_dir="/home/${config["snode1__running_user"]}/bin"
       target_dir="/home/${node_config[running_user]}/bin"
       copy_binaries_to_directory "${source_dir}" "${target_dir}"
@@ -541,6 +582,7 @@ generate_node_config() {
     [p2p_bind_port]="${config["snode${node_id}__p2p_bind_port"]}"
     [rpc_bind_port]="${config["snode${node_id}__rpc_bind_port"]}"
     [copy_blockchain]="${config["snode${node_id}__copy_blockchain"]}"
+    [copy_binaries]="${config["snode${node_id}__copy_binaries"]}"
     [installer_home]="/home/${config["snode${node_id}__running_user"]}/eqnode_installer"
   )
 }
@@ -553,7 +595,7 @@ copy_binaries_to_directory(){
     # move existing bin directory just to be safe
     sudo mv "${target_dir}" "${target_dir}_$(echo $RANDOM | md5sum | head -c 8)"
   fi
-  echo -e "\n\033[1mCopying binaries of Service Node 1 to '${target_dir}'.\033[0m"
+  echo -e "\n\033[1mCopying binaries from '${source_dir}' to '${target_dir}'.\033[0m"
   sudo cp -R "${source_dir}" "${target_dir}"
 }
 
@@ -608,7 +650,7 @@ finish_node_install() {
 }
 
 next_steps() {
-  tput rev; echo -e "\n\033[1m IMPORTANT: READ THE LAST STEPS TO COMPLETE A WORKING SERVICE NODE BELOW\033[0m"; tput sgr0
+  tput rev; echo -e "\n\033[1m IMPORTANT: READ THE LAST STEPS TO COMPLETE A WORKING SERVICE NODE BELOW \033[0m"; tput sgr0
   echo -e "\nIn order to complete the installation of a service node, you need to link a wallet to each node as operator."
   echo -e "The following command(s) will get you started."
   echo -e "\n\033[0;33m(Run command(s) and read the presented instructions carefully)\033[0m"
@@ -638,6 +680,14 @@ usage() {
 bash $0 [OPTIONS...]
 
 Options:
+  -b --copy-binaries [path]             Copy previously compiled binaries. Saves the time
+                                        of downloading and building new binaries. If the
+                                        --version option is used and set to a specific
+                                        version, it will verify if the binaries match
+                                        this version.
+
+                                        Example: --copy-binaries /home/snode/bin
+
   -c --copy-blockchain [no|auto|path]   Copy a previously downloaded blockchain if present
                                         on VPS or server for fast installation. Set 'auto'
                                         for auto-detect (default). Set a .equilibria
