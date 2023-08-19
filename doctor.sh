@@ -185,15 +185,14 @@ analyze_and_fix() {
         bad_blockchain_dir="/home/${username_badblockchain}/.equilibria"
         healthy_blockchain_dir="/home/${healthy_blockchains[1]}/.equilibria"
 
-        echo "sudo rm -Rf ${bad_blockchain_dir}"
-        echo "sudo cp -R ${healthy_blockchain_dir} ${bad_blockchain_dir}"
-        echo "sudo chown -R ${username_badblockchain}:${username_badblockchain} ${bad_blockchain_dir}"
-
-#        sudo mkdir "${bad_blockchain_dir}"
-#        sudo chmod "$(stat --format '%a' "${healthy_blockchain_dir]}")" "${bad_blockchain_dir}"
-#        sudo cp -R "${healthy_blockchain_dir]}/lmdb" "${bad_blockchain_dir}"
-#        sudo chown -R "${username_badblockchain}":"${username_badblockchain}" "${bad_blockchain_dir}"
+        sudo rm -Rf "${bad_blockchain_dir}"
+        sudo mkdir "${bad_blockchain_dir}"
+        sudo chmod "$(stat --format '%a' "${healthy_blockchain_dir]}")" "${bad_blockchain_dir}"
+        sudo cp -R "${healthy_blockchain_dir]}/lmdb" "${bad_blockchain_dir}"
+        sudo chown -R "${username_badblockchain}":"${username_badblockchain}" "${bad_blockchain_dir}"
       done
+
+      echo -e "\n\033[1mDone\033[0m"
     else
       echo -e "\n\033[1mUnable to perform surgery as no healthy donor blockchains were found.\e[0m"
       exit 0
