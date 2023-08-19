@@ -163,7 +163,7 @@ nodes_option_handler() {
   fi
 
   max_nodes_by_free_space="$((system_info[free_space_home_mount] / 1024 / 50000))"
-  max_nodes_by_memory="$((system_info[memory] / 1024 / 2600))"
+  max_nodes_by_memory="$((system_info[memory] / 1024 / 1600))"
   [[ "${max_nodes_by_memory}" -gt "$max_nodes_by_free_space" ]] && max_nodes="${max_nodes_by_memory}" || max_nodes="${max_nodes_by_free_space}"
 
   if [[ "$1" -gt "${max_nodes}" ]]; then
