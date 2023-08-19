@@ -182,6 +182,9 @@ analyze_and_fix() {
       for username_badblockchain in "${bad_blockchains[@]}"
       do
         echo -e "\n\033[1mFixing blockchain of user '${username_badblockchain}'...\033[0m"
+        echo -e "Stopping service node daemon '...\033[0m"
+        sudo -H -u "${username_badblockchain}" bash -c 'cd ~/eqnode_installer/ && bash eqsnode.sh stop'
+
         bad_blockchain_dir="/home/${username_badblockchain}/.equilibria"
         healthy_blockchain_dir="/home/${healthy_blockchains[1]}/.equilibria"
 
@@ -190,6 +193,11 @@ analyze_and_fix() {
         sudo chmod "$(stat --format '%a' "${healthy_blockchain_dir}")" "${bad_blockchain_dir}"
         sudo cp -R "${healthy_blockchain_dir}/lmdb" "${bad_blockchain_dir}"
         sudo chown -R "${username_badblockchain}":"${username_badblockchain}" "${bad_blockchain_dir}"
+
+        echo -e "Finished replacing bad blockchain by a healthy donor blockchain"
+
+        echo -e "Starting service node daemon'...\033[0m"
+        sudo -H -u "${username_badblockchain}" bash -c 'cd ~/eqnode_installer/ && bash eqsnode.sh start'
       done
 
       echo -e "\n\033[1mDone\033[0m"
