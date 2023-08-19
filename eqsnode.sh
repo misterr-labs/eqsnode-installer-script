@@ -43,6 +43,7 @@ main() {
     fakerun )       sleep 300 ;;
     fork_update )   fork_update ;;
     print_sn_key )  print_sn_key ;;
+    print_sn_status )  print_sn_status ;;
     * ) usage
   esac
 }
@@ -275,6 +276,10 @@ print_sn_key() {
   ~/bin/daemon print_sn_key ${port_params}
 }
 
+print_sn_status() {
+  ~/bin/daemon print_sn_status ${port_params}
+}
+
 fork_update() {
   local service_node_key service_node_active
 
@@ -315,6 +320,7 @@ Commands:
   stop                Stop Equilibria service node
   prepare_sn          Prepare Equilibria service node for staking
   print_sn_key        Print service node key
+  print_sn_status     Print service node registered status
   status              Check service status
   log                 View service log
 
