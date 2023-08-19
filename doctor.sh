@@ -167,7 +167,7 @@ analyze_and_fix() {
     if [[ "${#healthy_blockchains[@]}" -gt 0 ]]; then
       if [[ "${doctor_config[fix_mode]}" = "interactive" ]]; then
         while true; do
-          read -p $'\033[1mThere are ${#bad_blockchains[@]} bad blockchains. Do you want to fix them?\e[0m [Y/N]: ' yn
+          read -p $'\n\033[1mThere are bad blockchains. Do you want to fix them?\e[0m [Y/N]: ' yn
           yn=${yn:-N}
 
           case $yn in
@@ -178,7 +178,7 @@ analyze_and_fix() {
         done
       fi
       local username_badblockchain
-      local bad_blockchain_dir, healthy_blockchain_dir
+      local bad_blockchain_dir healthy_blockchain_dir
       for username_badblockchain in "${bad_blockchains[@]}"
       do
         echo -e "\n\033[1mFixing blockchain of user '${username_badblockchain}'...\033[0m"
