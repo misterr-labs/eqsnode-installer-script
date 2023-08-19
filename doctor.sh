@@ -151,7 +151,7 @@ analyze_and_fix() {
     service_node_key="$(sudo -H -u "${username}" bash -c 'cd ~/eqnode_installer/ && bash eqsnode.sh print_sn_key' | grep 'Public Key:' | grep -oP '(?<=: )+.*')"
 
     if [[ "${service_node_key}" != "" ]]; then
-      service_node_registered_state="$(wget --quiet https://explorer.equilibriacc.com/service_node/"${service_node_key}" -O - | grep -o -e "Can.t get service node pubkey .*" -e "This oracle node [-a-zA-Z0-9 ]*" )"
+      service_node_registered_state="$(wget --quiet https://explorer.equilibriacc.com/service_node/"${service_node_key}" -O - | grep -o -e "Can.t get service node pubkey .*" -e "This oracle node [-a-zA-Z0-9: ]*" )"
       echo -e "Service Node Registered state:\n${service_node_registered_state}\n"
     fi
     read blocks_done total_blocks perc <<< "$(sudo -H -u "${username}" bash -c 'cd ~/eqnode_installer/ && bash eqsnode.sh status' | grep -o 'Height:.*' | sed -n 's/^Height: \([0-9]*\)\/\([0-9]*\) (\([0-9.]*\).*/\1 \2 \3/p')"
