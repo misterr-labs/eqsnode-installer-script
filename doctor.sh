@@ -10,7 +10,7 @@ readonly script_basedir
 
 source "${script_basedir}/discovery.sh"
 
-eqnode_doctor_version='v1.1.0'
+eqnode_doctor_version='v1.2.0'
 readonly eqnode_doctor_version
 
 typeset -A doctor_config
@@ -159,10 +159,14 @@ analyze_and_fix() {
     echo "Local blockchain at block: ${blocks_done}"
 
 
-    if [[ "${perc}" = "100.0" && "${blocks_done}" -lt "${current_block_with_margin}" ]]; then
-      bad_blockchains["$badidx"]="${username}"
-      badidx=$((badidx + 1))
-      echo "Blockchain state: BAD"
+    if [[ "${blocks_done}" -lt "${current_block_with_margin}" ]]; then
+      if [[ "${perc}" = "100.0" ]]; then
+        bad_blockchains["$badidx"]="${username}"
+        badidx=$((badidx + 1))
+        echo "Blockchain state: BAD"
+      else
+        echo "Blockchain state: SYNCING"
+      fi
     else
       healthy_blockchains["$healthyidx"]="${username}"
       healthyidx=$((healthyidx + 1))
