@@ -10,7 +10,7 @@ readonly script_basedir
 
 source "${script_basedir}/discovery.sh"
 
-eqnode_doctor_version='v0.1'
+eqnode_doctor_version='v0.2'
 readonly eqnode_doctor_version
 
 typeset -A doctor_config
@@ -187,8 +187,8 @@ analyze_and_fix() {
 
         sudo rm -Rf "${bad_blockchain_dir}"
         sudo mkdir "${bad_blockchain_dir}"
-        sudo chmod "$(stat --format '%a' "${healthy_blockchain_dir]}")" "${bad_blockchain_dir}"
-        sudo cp -R "${healthy_blockchain_dir]}/lmdb" "${bad_blockchain_dir}"
+        sudo chmod "$(stat --format '%a' "${healthy_blockchain_dir}")" "${bad_blockchain_dir}"
+        sudo cp -R "${healthy_blockchain_dir}/lmdb" "${bad_blockchain_dir}"
         sudo chown -R "${username_badblockchain}":"${username_badblockchain}" "${bad_blockchain_dir}"
       done
 
