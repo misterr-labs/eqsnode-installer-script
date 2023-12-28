@@ -306,8 +306,9 @@ fork_update() {
   git checkout "${config[install_version]}"
   make
   sudo systemctl stop "${service_name}"
-  rm -r ~/bin
-  cd build/Linux/_HEAD_detached_at_"${config[install_version]}"_/release && mv bin ~/
+  sudo rm -Rf ~/bin
+  cd build/Linux/_HEAD_detached_at_"${config[install_version]}"_/release
+  sudo mv bin ~/
   sudo systemctl enable "${service_name}"
   sudo systemctl start "${service_name}"
 }
