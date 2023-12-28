@@ -250,6 +250,7 @@ prepare_sn() {
 }
 
 start() {
+  echo "Starting XEQ node"
   sudo systemctl start "${service_name}"
   echo "Service node started to check it works use bash equilibria.sh log"
 }
@@ -260,7 +261,7 @@ status() {
 }
 
 stop_all_nodes() {
-  echo Stopping XEQ node
+  echo "Stopping XEQ node"
   sudo systemctl stop "${service_name}"
 }
 
@@ -305,12 +306,13 @@ fork_update() {
   git submodule init && git submodule update
   git checkout "${config[install_version]}"
   make
-  sudo systemctl stop "${service_name}"
+
+  stop_all_nodes
   sudo rm -Rf ~/bin
   cd build/Linux/_HEAD_detached_at_"${config[install_version]}"_/release
   sudo mv bin ~/
-  sudo systemctl enable "${service_name}"
-  sudo systemctl start "${service_name}"
+  start
+
 }
 
 usage() {
