@@ -283,20 +283,20 @@ print_sn_status() {
 fork_update() {
   local service_node_key service_node_active
 
-  service_node_key="$(~/bin/daemon print_sn_key ${port_params} | grep 'Public Key:' | grep -oP '(?<=: )+.*')"
+  # service_node_key="$(~/bin/daemon print_sn_key ${port_params} | grep 'Public Key:' | grep -oP '(?<=: )+.*')"
 
-  if [[ "${service_node_key}" != "" ]]; then
-    service_node_active="$(wget --quiet https://explorer.equilibriacc.com/service_node/"${service_node_key}" -O - | grep 'registered and active on the network and expires on' | wc -l)"
+  # if [[ "${service_node_key}" != "" ]]; then
+  #   service_node_active="$(wget --quiet https://explorer.equilibriacc.com/service_node/"${service_node_key}" -O - | grep 'registered and active on the network and expires on' | wc -l)"
 
-    if [[ "${service_node_active}" -gt 0 ]]; then
-      echo -e "\n\033[0;33merror: Service Node with public key ${service_node_key} is still active in the network.\033[0m"
-      echo -e "\nUpdate aborted."
-      exit 1
-    fi
-  fi
+  #   if [[ "${service_node_active}" -gt 0 ]]; then
+  #     echo -e "\n\033[0;33merror: Service Node with public key ${service_node_key} is still active in the network.\033[0m"
+  #     echo -e "\nUpdate aborted."
+  #     exit 1
+  #   fi
+  # fi
 
-  config[install_version]="$(get_latest_equilibria_version_number)"
   echo -e "\033[1mRetrieving latest version tag from Github...\033[0m"
+  config[install_version]="$(get_latest_equilibria_version_number)"
 
   rm -Rf "${script_basedir}/equilibria"
   git clone --recursive "${config[git_repository]}" equilibria && cd equilibria
