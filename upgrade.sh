@@ -207,9 +207,13 @@ upgrade_manager() {
       upgrade_installer_in_installer_home "/home/${username}/eqnode_installer"
       sudo -H -u "${username}" bash -c 'cd ~/eqnode_installer/ && bash eqsnode.sh fork_update'
     else
+      sudo -H -u "${username}" bash -c 'cd ~/eqnode_installer/ && bash eqsnode.sh stop'
+
       source_dir="/home/${first_username}/bin"
       target_dir="/home/${username}/bin"
       copy_binaries_to_directory "${source_dir}" "${target_dir}"
+
+      sudo -H -u "${username}" bash -c 'cd ~/eqnode_installer/ && bash eqsnode.sh start'
     fi
     idx=$((idx + 1))
   done
