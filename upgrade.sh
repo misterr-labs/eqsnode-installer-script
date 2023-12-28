@@ -189,9 +189,10 @@ upgrade_cmake_if_needed() {
 }
 
 upgrade_manager() {
-  local usernames idx
+  local usernames first_username idx
   read -a usernames <<< "${user_option_value//,/ }"
 
+  idx=1
   for username in "${usernames[@]}"
   do
     echo -e "\n\033[1mUpgrading user '${username}'...\033[0m"
@@ -200,9 +201,30 @@ upgrade_manager() {
       continue
     fi
 
-    upgrade_installer_in_installer_home "/home/${username}/eqnode_installer"
-    sudo -H -u "${username}" bash -c 'cd ~/eqnode_installer/ && bash eqsnode.sh fork_update'
+    if [[ "${idx}" -eq 1 ]]; then
+      first_username="${username}"
+
+      upgrade_installer_in_installer_home "/home/${username}/eqnode_installer"
+      sudo -H -u "${username}" bash -c 'cd ~/eqnode_installer/ && bash eqsnode.sh fork_update'
+    else
+      source_dir="/home/${first_username}/bin"
+      target_dir="/home/${username}/bin"
+      copy_binaries_to_directory "${source_dir}" "${target_dir}"
+    fi
+    idx=$((idx + 1))
   done
+}
+
+copy_binaries_to_directory(){
+  local source_dir="$1"
+  local target_dir="$2"
+
+  if [[ -d "${target_dir}" ]]; then
+    # move existing bin directory just to be safe
+    sudo mv "${target_dir}" "${target_dir}_$(echo $RANDOM | md5sum | head -c 8)"
+  fi
+  echo -e "\n\033[1mCopying binaries from '${source_dir}' to '${target_dir}'.\033[0m"
+  sudo cp -R "${source_dir}" "${target_dir}"
 }
 
 sudoers_user_nopasswd() {
