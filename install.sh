@@ -21,7 +21,6 @@ command_options_set=(
   [nodes]=0
   [ports]=0
   [user]=0
-  [upgrade]=0
   [version]=0
 )
 copy_binaries_option_value=
@@ -41,12 +40,7 @@ main() {
   process_command_line_args "$@"
 
   pre_install_checks
-
-  if [[ "${command_options_set[upgrade]}" -eq 1 ]]; then
-    upgrade_manager  
-  else
-    install_manager
-  fi
+  install_manager
 }
 
 print_splash_screen () {
@@ -77,7 +71,7 @@ process_command_line_args() {
 }
 
 parse_command_line_args() {
-  args="$(getopt -a -n installer -o "hiob:c:n:p:u:v:" --long help,inspect-auto-magic,one-passwd-file,upgrade,copy-binaries:,copy-blockchain:,nodes:,ports:,user:,version: -- "$@")"
+  args="$(getopt -a -n installer -o "hiob:c:n:p:u:v:" --long help,inspect-auto-magic,one-passwd-file,copy-binaries:,copy-blockchain:,nodes:,ports:,user:,version: -- "$@")"
   eval set -- "${args}"
 
   while :
@@ -91,7 +85,6 @@ parse_command_line_args() {
       -o | --one-passwd-file)       command_options_set[one_passwd_file]=1; shift 1 ;;
       -p | --ports)                 command_options_set[ports]=1; ports_option_value="$2"; shift 2 ;;
       -u | --user)                  command_options_set[user]=1; user_option_value="$2"; shift 2 ;;
-      --upgrade)                    command_options_set[upgrade]=1; shift 1 ;;
       -v | --version)               command_options_set[version]=1; version_option_value="$2"; shift 2 ;;
       --)                           shift ; break ;;
       *)                            echo "Unexpected option: $1" ;
@@ -129,7 +122,6 @@ validate_parsed_command_line_args() {
   friendly_option_groupings=(
     "<no_options_set>"
     "copy_blockchain copy_binaries nodes ports user version"
-    "upgrade user"
     "inspect_auto_magic nodes"
     "one_passwd_file"
     "help"
@@ -316,41 +308,6 @@ one_password_file_option_handler() {
 }
 
 user_option_handler() {
-  if [[ "${command_options_set[upgrade]}" -eq 1 ]]; then
-    user_option_at_upgrade_handler "$1"
-  else 
-    user_option_at_install_handler "$1"
-  fi
-}
-
-user_option_at_install_handler() {
-  if [[ "$1" = "auto" ]]; then
-    auto_search_available_username
-
-  elif validate_manual_user_string_format "$1"; then
-    validate_manual_users_and_set_config_if_valid "$1"
-  else
-    echo -e "\n\033[0;33merror: Invalid --user value '$1'\033[0m\n"
-    usage
-    exit 1
-  fi
-}
-
-user_option_at_upgrade_handler() {
-  if [[ "$1" = "auto" ]]; then
-    echo -e "\n\033[0;33merror: Invalid --user option 'auto'. Not supported yet.\033[0m\n"
-    exit 1  
-  elif validate_manual_user_string_format "$1"; then
-    echo -e "\nBasic user string validation passed"
-  else
-    echo -e "\n\033[0;33merror: Invalid --user value '$1'\033[0m\n"
-    usage
-    exit 1
-  fi
-}
-
-
-user_option_at_install_handler() {
   if [[ "$1" = "auto" ]]; then
     auto_search_available_username
 
@@ -374,15 +331,15 @@ validate_manual_users_and_set_config_if_valid() {
   idx=1
   for username in "${usernames[@]}"
   do
-      if running_user_has_active_daemon "${username}"; then
-        echo -e "\n\033[0;33mSAFETY POLICY VIOLATION: User '${username}' is already running an active service node daemon. Please install with a different user!\033[0m"
-        echo -e "\nInstallation aborted."
-        exit 1
-      elif running_user_has_active_installation "${username}"; then
-        echo -e "\n\033[0;33mSAFETY POLICY VIOLATION: User '${username}' is running an active installation. Please install with a different user!\033[0m"
-        echo -e "\nInstallation aborted."
-        exit 1
-      fi
+    if running_user_has_active_daemon "${username}"; then
+      echo -e "\n\033[0;33mSAFETY POLICY VIOLATION: User '${username}' is already running an active service node daemon. Please install with a different user!\033[0m"
+      echo -e "\nInstallation aborted."
+      exit 1
+    elif running_user_has_active_installation "${username}"; then
+      echo -e "\n\033[0;33mSAFETY POLICY VIOLATION: User '${username}' is running an active installation. Please install with a different user!\033[0m"
+      echo -e "\nInstallation aborted."
+      exit 1
+    fi
     config["snode${idx}__running_user"]="${username}"
     idx=$((idx + 1))
   done
@@ -574,19 +531,6 @@ install_manager() {
   echo -e "\n\033[1mGoodbye!\033[0m\n"
 }
 
-upgrade_manager() {
-  local usernames idx
-  read -a usernames <<< "${user_option_value//,/ }"
-
-  for username in "${usernames[@]}"
-  do
-    echo -e "\n\033[1mUpgrading user '${username}'...\033[0m"
-
-    upgrade_installer_in_installer_home "/home/${username}/eqnode_installer"
-    sudo -H -u "${username}" bash -c 'cd ~/eqnode_installer/ && bash eqsnode.sh fork_update'
-  done
-}
-
 setup_all_running_users() {
   local idx=1
 
@@ -695,13 +639,6 @@ copy_installer_to_installer_home() {
   sudo chown -R "${node_config_ref[running_user]}":root "${node_config_ref[installer_home]}"
 }
 
-upgrade_installer_in_installer_home() {
-  local -n installer_home="$1"
-
-  echo -e "\n\033[1mUpdating installer in '${installer_home}'...\033[0m"
-  sudo cp -f eqsnode.sh eqnode.service.template common.sh "${installer_home}"
-}
-
 install_node_with_running_user() {
   local running_user="$1"
   sudo -H -u "${running_user}" bash -c 'cd ~/eqnode_installer/ && bash eqsnode.sh install'
@@ -794,12 +731,6 @@ Options:
                                                     --user auto
                                                     --nodes 2 --user snode,snode2
                                                     --nodes 2 --user auto
-
-  --upgrade                             Upgrades the Equilibria binaries to the latest version
-                                        for defined users. Must be used in conjunction with 
-                                        the --user option ('auto' is not supported yet).
-                                        Examples:
-                                        --upgrade --user snode,snode2
 
   -v --version [auto|version]           Set Equilibria version with format 'v0.0.0'. Use
                                         'auto' to install the latest version.

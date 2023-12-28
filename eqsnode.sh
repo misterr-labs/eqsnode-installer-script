@@ -298,6 +298,8 @@ fork_update() {
   echo -e "\033[1mRetrieving latest version tag from Github...\033[0m"
   config[install_version]="$(get_latest_equilibria_version_number)"
 
+  echo -e "\033[1mUpgrading to ${config[install_version]}...\033[0m"
+
   rm -Rf "${script_basedir}/equilibria"
   git clone --recursive "${config[git_repository]}" equilibria && cd equilibria
   git submodule init && git submodule update
