@@ -250,6 +250,7 @@ prepare_sn() {
 }
 
 start() {
+  echo "Starting XEQ node"
   sudo systemctl start "${service_name}"
   echo "Service node started to check it works use bash equilibria.sh log"
 }
@@ -260,7 +261,7 @@ status() {
 }
 
 stop_all_nodes() {
-  echo Stopping XEQ node
+  echo "Stopping XEQ node"
   sudo systemctl stop "${service_name}"
 }
 
@@ -283,31 +284,35 @@ print_sn_status() {
 fork_update() {
   local service_node_key service_node_active
 
-  service_node_key="$(~/bin/daemon print_sn_key ${port_params} | grep 'Public Key:' | grep -oP '(?<=: )+.*')"
+  # service_node_key="$(~/bin/daemon print_sn_key ${port_params} | grep 'Public Key:' | grep -oP '(?<=: )+.*')"
 
-  if [[ "${service_node_key}" != "" ]]; then
-    service_node_active="$(wget --quiet https://explorer.equilibriacc.com/service_node/"${service_node_key}" -O - | grep 'registered and active on the network and expires on' | wc -l)"
+  # if [[ "${service_node_key}" != "" ]]; then
+  #   service_node_active="$(wget --quiet https://explorer.equilibriacc.com/service_node/"${service_node_key}" -O - | grep 'registered and active on the network and expires on' | wc -l)"
 
-    if [[ "${service_node_active}" -gt 0 ]]; then
-      echo -e "\n\033[0;33merror: Service Node with public key ${service_node_key} is still active in the network.\033[0m"
-      echo -e "\nUpdate aborted."
-      exit 1
-    fi
-  fi
+  #   if [[ "${service_node_active}" -gt 0 ]]; then
+  #     echo -e "\n\033[0;33merror: Service Node with public key ${service_node_key} is still active in the network.\033[0m"
+  #     echo -e "\nUpdate aborted."
+  #     exit 1
+  #   fi
+  # fi
 
-  config[install_version]="$(get_latest_equilibria_version_number)"
   echo -e "\033[1mRetrieving latest version tag from Github...\033[0m"
+  config[install_version]="$(get_latest_equilibria_version_number)"
+
+  echo -e "\033[1mUpgrading to ${config[install_version]}...\033[0m"
 
   rm -Rf "${script_basedir}/equilibria"
   git clone --recursive "${config[git_repository]}" equilibria && cd equilibria
   git submodule init && git submodule update
   git checkout "${config[install_version]}"
   make
-  sudo systemctl stop "${service_name}"
-  rm -r ~/bin
-  cd build/Linux/_HEAD_detached_at_"${config[install_version]}"_/release && mv bin ~/
-  sudo systemctl enable "${service_name}"
-  sudo systemctl start "${service_name}"
+
+  stop_all_nodes
+  sudo rm -Rf ~/bin
+  cd build/Linux/_HEAD_detached_at_"${config[install_version]}"_/release
+  sudo mv bin ~/
+  start
+
 }
 
 usage() {

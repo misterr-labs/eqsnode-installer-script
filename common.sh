@@ -1,4 +1,4 @@
-eqnode_installer_version='v5.1.2'
+eqnode_installer_version='v5.1.3'
 readonly eqnode_installer_version
 
 version_regex="^v[0-9]+.[0-9]+.[0-9]+$"
@@ -15,7 +15,7 @@ config=(
   [nodes]=1
   [install_version]='auto'
   [running_user]='snode'
-  [required_cmake_version]='3.18'
+  [required_cmake_version]='3.28'
   [git_repository]='https://github.com/EquilibriaCC/Equilibria.git'
   [p2p_bind_port]=9230
   [rpc_bind_port]=9231
