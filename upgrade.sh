@@ -63,7 +63,7 @@ process_command_line_args() {
 }
 
 parse_command_line_args() {
-  args="$(getopt -a -n installer -o "hiob:c:n:p:u:v:" --long help,user: -- "$@")"
+  args="$(getopt -a -n installer -o "hu:" --long help,user: -- "$@")"
   eval set -- "${args}"
 
   while :
@@ -139,7 +139,7 @@ user_option_handler() {
 }
 
 validate_manual_user_string_format() {
-  [[ "$(echo "$1" | grep -oP -e "(?<=,|^)+[a-zA-Z][a-zA-Z0-9]+(?=,|$)+" | natsort | uniq | wc -l)" -eq "${config[nodes]}" ]]
+  [[ "$(echo "$1" | grep -oP -e "(?<=,|^)+[a-zA-Z][a-zA-Z0-9]+(?=,|$)+" | natsort | uniq | wc -l)" -gt 0 ]]
 }
 
 pre_install_checks () {
