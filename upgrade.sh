@@ -31,7 +31,7 @@ main() {
 
   pre_install_checks
 
-  #upgrade_manager
+  upgrade_manager
 
 }
 
@@ -195,6 +195,10 @@ upgrade_manager() {
   for username in "${usernames[@]}"
   do
     echo -e "\n\033[1mUpgrading user '${username}'...\033[0m"
+    if ! id -u "${username}" >/dev/null 2>&1; then
+      echo -e "\033[0;33merror: Invalid username '${username}'. Skipping user!\033[0m\n"
+      continue
+    fi
 
     upgrade_installer_in_installer_home "/home/${username}/eqnode_installer"
     sudo -H -u "${username}" bash -c 'cd ~/eqnode_installer/ && bash eqsnode.sh fork_update'
