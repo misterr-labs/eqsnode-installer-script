@@ -10,7 +10,7 @@ readonly script_basedir
 
 source "${script_basedir}/discovery.sh"
 
-eqnode_doctor_version='v1.2.0'
+eqnode_doctor_version='v1.2.1'
 readonly eqnode_doctor_version
 
 typeset -A doctor_config
@@ -135,7 +135,7 @@ analyze_and_fix() {
   local blocks_done= ; local total_blocks= ;
 
   echo -e "\n\033[1mFetching external blockchain state...\033[0m"
-  local current_block="$(wget --quiet https://explorer.equilibriacc.com/ -O - | grep -o 'Equilibria emission is .* as of .* block' | sed -n 's/^Equilibria emission is \([0-9]*\)\.\([0-9]*\) as of \([0-9]*\).*/\3/p')"
+  local current_block="$(wget --quiet https://explorer.equilibriacc.com/ -O - | grep -o 'XEQ as of block .*' | sed -n 's/^XEQ as of block \([0-9]*\).*/\1/p')"
   echo -e "Blockchain explorer current block: ${current_block}"
 
   local current_block_with_margin=$((current_block - allowed_block_difference));
