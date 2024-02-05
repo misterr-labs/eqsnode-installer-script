@@ -10,7 +10,7 @@ readonly script_basedir
 
 source "${script_basedir}/discovery.sh"
 
-eqnode_doctor_version='v1.3.0'
+eqnode_doctor_version='v1.3.1'
 readonly eqnode_doctor_version
 
 typeset -A doctor_config
@@ -131,7 +131,7 @@ analyze_and_fix() {
 
   discover_daemons daemon_users 'user'
   local node_blockstate
-  local allowed_block_difference=2
+  local allowed_block_difference=5
   local blocks_done= ; local total_blocks= ;
 
   echo -e "\n\033[1mFetching external blockchain state...\033[0m"
@@ -200,18 +200,9 @@ analyze_and_fix() {
         healthy_blockchain_dir="/home/${healthy_blockchains[1]}/.equilibria"
 
         echo -e "\nReplacing bad blockchain by a healthy donor blockchain...(may take several minutes)"
-        sudo mv "${bad_blockchain_dir}" "${bad_blockchain_dir}.old"       
-        sudo mkdir "${bad_blockchain_dir}"
-        
-        # preserve service node key
-        sudo mv "${bad_blockchain_dir}.old/key" "${bad_blockchain_dir}"
-        
-        sudo rm -Rf "${bad_blockchain_dir}.old"
-        
-        sudo chmod "$(stat --format '%a' "${healthy_blockchain_dir}")" "${bad_blockchain_dir}"
+        sudo rm -Rf "${bad_blockchain_dir}/lmdb"
         sudo cp -R "${healthy_blockchain_dir}/lmdb" "${bad_blockchain_dir}"
         sudo chown -R "${username_badblockchain}":"${username_badblockchain}" "${bad_blockchain_dir}"
-
 
         echo -e "Starting service node daemon..."
         sudo -H -u "${username_badblockchain}" bash -c 'cd ~/eqnode_installer/ && bash eqsnode.sh start'
