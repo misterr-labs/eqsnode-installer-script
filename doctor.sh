@@ -131,7 +131,7 @@ analyze_and_fix() {
 
   discover_daemons daemon_users 'user'
   local node_blockstate
-  local allowed_block_difference=5
+  local allowed_block_difference=2
   local blocks_done= ; local total_blocks= ;
 
   echo -e "\n\033[1mFetching external blockchain state...\033[0m"
