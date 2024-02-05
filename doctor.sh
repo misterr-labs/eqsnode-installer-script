@@ -10,7 +10,7 @@ readonly script_basedir
 
 source "${script_basedir}/discovery.sh"
 
-eqnode_doctor_version='v1.2.1'
+eqnode_doctor_version='v1.3.0'
 readonly eqnode_doctor_version
 
 typeset -A doctor_config
@@ -200,8 +200,14 @@ analyze_and_fix() {
         healthy_blockchain_dir="/home/${healthy_blockchains[1]}/.equilibria"
 
         echo -e "\nReplacing bad blockchain by a healthy donor blockchain...(may take several minutes)"
-        sudo rm -Rf "${bad_blockchain_dir}"
+        sudo mv "${bad_blockchain_dir}" "${bad_blockchain_dir}.old"       
         sudo mkdir "${bad_blockchain_dir}"
+        
+        # preserve service node key
+        sudo mv "${bad_blockchain_dir}.old/key" "${bad_blockchain_dir}"
+        
+        sudo rm -Rf "${bad_blockchain_dir}.old"
+        
         sudo chmod "$(stat --format '%a' "${healthy_blockchain_dir}")" "${bad_blockchain_dir}"
         sudo cp -R "${healthy_blockchain_dir}/lmdb" "${bad_blockchain_dir}"
         sudo chown -R "${username_badblockchain}":"${username_badblockchain}" "${bad_blockchain_dir}"
