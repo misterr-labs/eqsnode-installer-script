@@ -10,7 +10,7 @@ readonly script_basedir
 
 source "${script_basedir}/discovery.sh"
 
-eqnode_doctor_version='v1.3.1'
+eqnode_doctor_version='v1.3.3'
 readonly eqnode_doctor_version
 
 typeset -A doctor_config
