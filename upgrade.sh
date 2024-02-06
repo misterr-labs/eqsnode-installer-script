@@ -200,11 +200,11 @@ upgrade_manager() {
       echo -e "\033[0;33merror: Invalid username '${username}'. Skipping user!\033[0m\n"
       continue
     fi
-
+    upgrade_installer_in_installer_home "/home/${username}/eqnode_installer"
+    sudo chown -R "${username}":"${username}" "/home/${username}/eqnode_installer"
+    
     if [[ "${idx}" -eq 1 ]]; then
       first_username="${username}"
-
-      upgrade_installer_in_installer_home "/home/${username}/eqnode_installer"
       sudo -H -u "${username}" bash -c 'cd ~/eqnode_installer/ && bash eqsnode.sh fork_update'
     else
       sudo -H -u "${username}" bash -c 'cd ~/eqnode_installer/ && bash eqsnode.sh stop'
