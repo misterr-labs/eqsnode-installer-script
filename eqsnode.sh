@@ -272,7 +272,7 @@ open_firewall() {
   [[ -x "$(command -v ufw)" ]] && firewall_mode='ufw'
 
   if [[ "${firewall_mode}" = 'iptables' ]]; then
-    echo -e "\n\033[1mOpen firewall p2p port "${config[p2p_bind_port]}" [iptables]...\033[0m"
+    echo -e "\n\033[1mOpen firewall p2p port ${config[p2p_bind_port]} [iptables]...\033[0m"
     check_iptables_dependencies
 
     sudo iptables -A INPUT -p tcp --dport "${config[p2p_bind_port]}" -m conntrack --ctstate NEW,ESTABLISHED -j ACCEPT
@@ -318,10 +318,6 @@ stop_all_nodes() {
 
 log() {
   sudo journalctl -u "${service_name}" -af
-}
-
-test() {
-  echo -e "first: $1, second: $2";
 }
 
 print_sn_key() {

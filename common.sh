@@ -21,7 +21,7 @@ config=(
   [rpc_bind_port]=9231
   [daemon_log_level]=
   [daemon_no_fluffy_blocks]=0
-  [open_firewall]='no'
+  [open_firewall]=0
 )
 
 typeset -A installer_state
