@@ -12,6 +12,7 @@ install_root_service='/etc/systemd/system'
 readonly script_basedir install_root_bin_dir install_root_service
 
 source "${script_basedir}/common.sh"
+load_config "${script_basedir}/install.conf" config
 
 service_name="eqnode_${config[running_user]}.service"
 service_file="${install_root_service}/${service_name}"
@@ -32,6 +33,7 @@ readonly service_template
 daemon_start_time=
 
 main() {
+  exit 1
   case "$1" in
     install )       install_node ;;
     prepare_sn )    prepare_sn ;;
@@ -39,7 +41,6 @@ main() {
     stop )          stop_all_nodes ;;
     status )        status ;;
     log )           log ;;
-    update )        update ;;
     fakerun )       sleep 300 ;;
     fork_update )   fork_update ;;
     print_sn_key )  print_sn_key ;;
@@ -132,7 +133,15 @@ compile_and_move_binaries() {
   make
 
   echo -e "\n\033[1mMoving Equilibria binaries to installation directory...\033[0m"
-  cd build/Linux/_HEAD_detached_at_"${config[install_version]}"_/release && mv bin "${install_root_bin_dir}"
+  cd "$(get_make_release_base_dir)" && mv bin "${install_root_bin_dir}"
+}
+
+get_make_release_base_dir() {
+    if [[ "${config[install_version]}" = "master" ]]; then
+      echo "build/Linux/${config[install_version]}/release"
+    else
+       echo "build/Linux/_HEAD_detached_at_${config[install_version]}_/release"
+    fi
 }
 
 build_and_install_service_file() {
@@ -145,8 +154,16 @@ build_and_install_service_file() {
 
   echo -e "\n\033[1mGenerating service file '${service_file}'...\033[0m"
 
+  local opt_params=
+  if [[ "${config[daemon_no_fluffy_blocks]}" -eq 1 ]]; then
+    opt_params+=" --no-fluffy-blocks"
+  fi
+  if [[ -n "${config[daemon_log_level]}" ]]; then
+    opt_params+=" --log-level ${config[daemon_log_level]}"
+  fi
+
   # shellcheck disable=SC2002
-  cat "${service_template}" | sed -e "s/%INSTALL_USERNAME%/${config[running_user]}/g" -e "s#%INSTALL_ROOT%#${install_root_bin_dir}#g" -e "s/%PORT_PARAMS%/${port_params}/g" | sudo tee "${service_file}"
+  cat "${service_template}" | sed -e "s/%INSTALL_USERNAME%/${config[running_user]}/g" -e "s#%INSTALL_ROOT%#${install_root_bin_dir}#g" -e "s/%PORT_PARAMS%/${port_params}/g"  -e "s/%OPT_PARAMS%/${opt_params}/g" | sudo tee "${service_file}"
 
   echo -e "\n\033[1mReloading service manager...\033[0m"
   sudo systemctl daemon-reload
@@ -269,8 +286,8 @@ log() {
   sudo journalctl -u "${service_name}" -af
 }
 
-update() {
-  git pull
+test() {
+  echo -e "first: $1, second: $2";
 }
 
 print_sn_key() {
@@ -282,23 +299,6 @@ print_sn_status() {
 }
 
 fork_update() {
-  local service_node_key service_node_active
-
-  # service_node_key="$(~/bin/daemon print_sn_key ${port_params} | grep 'Public Key:' | grep -oP '(?<=: )+.*')"
-
-  # if [[ "${service_node_key}" != "" ]]; then
-  #   service_node_active="$(wget --quiet https://explorer.equilibriacc.com/service_node/"${service_node_key}" -O - | grep 'registered and active on the network and expires on' | wc -l)"
-
-  #   if [[ "${service_node_active}" -gt 0 ]]; then
-  #     echo -e "\n\033[0;33merror: Service Node with public key ${service_node_key} is still active in the network.\033[0m"
-  #     echo -e "\nUpdate aborted."
-  #     exit 1
-  #   fi
-  # fi
-
-  echo -e "\033[1mRetrieving latest version tag from Github...\033[0m"
-  config[install_version]="$(get_latest_equilibria_version_number)"
-
   echo -e "\033[1mUpgrading to ${config[install_version]}...\033[0m"
 
   rm -Rf "${script_basedir}/equilibria"
@@ -309,10 +309,11 @@ fork_update() {
 
   stop_all_nodes
   sudo rm -Rf ~/bin
-  cd build/Linux/_HEAD_detached_at_"${config[install_version]}"_/release
+  cd "$(get_make_release_base_dir)"
   sudo mv bin ~/
-  start
 
+  build_and_install_service_file
+  start
 }
 
 usage() {

@@ -22,6 +22,9 @@ command_options_set=(
   [ports]=0
   [user]=0
   [version]=0
+  [daemon_no_fluffy_blocks]=0
+  [daemon_log_level]=0
+  [git_repository]=0
 )
 copy_binaries_option_value=
 copy_blockchain_option_value=
@@ -29,6 +32,8 @@ nodes_option_value=
 ports_option_value=
 user_option_value=
 version_option_value=
+daemon_log_level_option_value=
+git_repository_option_value=
 
 declare -A system_info
 
@@ -71,25 +76,28 @@ process_command_line_args() {
 }
 
 parse_command_line_args() {
-  args="$(getopt -a -n installer -o "hiob:c:n:p:u:v:" --long help,inspect-auto-magic,one-passwd-file,copy-binaries:,copy-blockchain:,nodes:,ports:,user:,version: -- "$@")"
+  args="$(getopt -a -n installer -o "hiob:c:n:p:u:v:" --long help,inspect-auto-magic,one-passwd-file,copy-binaries:,copy-blockchain:,nodes:,ports:,user:,version:,set-daemon-log-level:,git-repository: -- "$@")"
   eval set -- "${args}"
 
   while :
   do
     case "$1" in
-      -h | --help)                  command_options_set[help]=1 ; shift ;;
-      -b | --copy-binaries)         command_options_set[copy_binaries]=1; copy_binaries_option_value="$2"; shift 2 ;;
-      -c | --copy-blockchain)       command_options_set[copy_blockchain]=1; copy_blockchain_option_value="$2"; shift 2 ;;
-      -i | --inspect-auto-magic)    command_options_set[inspect_auto_magic]=1; shift ;;
-      -n | --nodes)                 command_options_set[nodes]=1; nodes_option_value="$2"; shift 2 ;;
-      -o | --one-passwd-file)       command_options_set[one_passwd_file]=1; shift 1 ;;
-      -p | --ports)                 command_options_set[ports]=1; ports_option_value="$2"; shift 2 ;;
-      -u | --user)                  command_options_set[user]=1; user_option_value="$2"; shift 2 ;;
-      -v | --version)               command_options_set[version]=1; version_option_value="$2"; shift 2 ;;
-      --)                           shift ; break ;;
-      *)                            echo "Unexpected option: $1" ;
-                                    usage
-                                    exit 0 ;;
+      -h | --help)                    command_options_set[help]=1 ; shift ;;
+      -b | --copy-binaries)           command_options_set[copy_binaries]=1; copy_binaries_option_value="$2"; shift 2 ;;
+      -c | --copy-blockchain)         command_options_set[copy_blockchain]=1; copy_blockchain_option_value="$2"; shift 2 ;;
+      -i | --inspect-auto-magic)      command_options_set[inspect_auto_magic]=1; shift ;;
+      -n | --nodes)                   command_options_set[nodes]=1; nodes_option_value="$2"; shift 2 ;;
+      -o | --one-passwd-file)         command_options_set[one_passwd_file]=1; shift 1 ;;
+      -p | --ports)                   command_options_set[ports]=1; ports_option_value="$2"; shift 2 ;;
+      -u | --user)                    command_options_set[user]=1; user_option_value="$2"; shift 2 ;;
+      -v | --version)                 command_options_set[version]=1; version_option_value="$2"; shift 2 ;;
+      --set-daemon-no-fluffy-blocks)  command_options_set[daemon_no_fluffy_blocks]=1; shift ;;
+      --set-daemon-log-level)         command_options_set[daemon_log_level]=1; daemon_log_level_option_value="$2"; shift 2 ;;
+      --git-repository)               command_options_set[git_repository]=1; git_repository_option_value="$2"; shift 2 ;;
+      --)                             shift ; break ;;
+      *)                              echo "Unexpected option: $1" ;
+                                      usage
+                                      exit 0 ;;
     esac
   done
 }
@@ -104,12 +112,16 @@ set_config_and_execute_info_commands() {
   # info commands, exit 0 must be first listed options in this function
   [[ "${command_options_set[inspect_auto_magic]}" -eq 1 ]] && inspect_auto_magic_option_handler && exit 0
 
+  if [[ "${command_options_set[daemon_no_fluffy_blocks]}" -eq 1 ]]; then config[daemon_no_fluffy_blocks]=1; fi
+
   # process more complex set config
   if [[ "${command_options_set[version]}" -eq 1 ]]; then version_option_handler "${version_option_value}"; else version_option_handler "auto"; fi
   if [[ "${command_options_set[ports]}" -eq 1 ]]; then ports_option_handler "${ports_option_value}"; else ports_option_handler "auto"; fi
   if [[ "${command_options_set[user]}" -eq 1 ]]; then user_option_handler "${user_option_value}"; else user_option_handler "auto"; fi
   if [[ "${command_options_set[copy_blockchain]}" -eq 1 ]]; then copy_blockchain_option_handler "${copy_blockchain_option_value}"; else copy_blockchain_option_handler "auto"; fi
   if [[ "${command_options_set[copy_binaries]}" -eq 1 ]]; then copy_binaries_option_handler "${copy_binaries_option_value}"; fi
+  if [[ "${command_options_set[daemon_log_level]}" -eq 1 ]]; then daemon_log_level_option_handler "${daemon_log_level_option_value}"; fi
+  if [[ "${command_options_set[git_repository]}" -eq 1 ]]; then git_repository_option_handler "${git_repository_option_value}"; fi
 
   # necessary return 0
   return 0
@@ -121,7 +133,7 @@ validate_parsed_command_line_args() {
 
   friendly_option_groupings=(
     "<no_options_set>"
-    "copy_blockchain copy_binaries nodes ports user version"
+    "copy_blockchain copy_binaries nodes ports user version daemon_no_fluffy_blocks daemon_log_level git_repository"
     "inspect_auto_magic nodes"
     "one_passwd_file"
     "help"
@@ -252,17 +264,17 @@ copy_blockchain_option_handler() {
 
 version_option_handler() {
   if [[ "$1" = "auto" ]]; then
-    echo -e "\n\033[1mAuto-detecting latest Equilibria version...\033[0m"
+    echo -e "\n\033[1mAuto-detecting latest Equilibria version tag..\033[0m"
     config[install_version]="$(get_latest_equilibria_version_number)"
-  elif [[ "$1" =~ ${version_regex} ]]; then
+  elif [[ "$1" = "master" || "$1" =~ ${version_regex} || "$1" =~ ${rev_hash_regex} ]]; then
+    echo -e "\n\033[1mInstalling manually set Equilibria branch/version/hash:\033[0m"
     config[install_version]="$1"
-    echo -e "\n\033[1mInstalling manually set Equilibria version:\033[0m"
   else
     echo -e "\033[0;33merror: Invalid --version value '$1'\033[0m\n"
     usage
     exit 1
   fi
-  echo -e "Version -> ${config[install_version]}"
+  echo -e "-> ${config[install_version]}"
 }
 
 auto_ports_option_handler() {
@@ -304,6 +316,18 @@ one_password_file_option_handler() {
     echo -e "\n\nsucces: .onepasswd file created. Remove this file to enable manual password input again."
   else
     echo -e "\n\nerror: .onepasswd file could not be created"
+  fi
+}
+
+daemon_log_level_option_handler() {
+  if [[ -n "$1" ]]; then
+    config[daemon_log_level]="$1"
+  fi
+}
+
+git_repository_option_handler() {
+  if [[ -n "$1" ]]; then
+    config[git_repository]="$1"
   fi
 }
 
@@ -506,7 +530,7 @@ install_manager() {
 
   while [ "${idx}" -le "${config[nodes]}" ]; do
     generate_node_config node_config "${idx}"
-
+    tput rev; echo -e "\n\033[1m "${node_config[running_user]}" \033[0m"; tput sgr0
     # if existing binaries directory is set, copy these for the first node
     if [[ "${idx}" -eq 1 && "${node_config[copy_binaries]}" != "" ]]; then
        target_dir="/home/${config["snode1__running_user"]}/bin"
@@ -536,6 +560,7 @@ setup_all_running_users() {
 
   while [ "${idx}" -le "${config[nodes]}" ]; do
     echo -e "\n\033[1mSetting up user '${config["snode${idx}__running_user"]}' to run service node ${idx}...\033[0m\n"
+    tput rev; echo -e "\n\033[1m "${config["snode${idx}__running_user"]}" \033[0m"; tput sgr0
     setup_running_user "${config["snode${idx}__running_user"]}"
     idx=$((idx + 1))
   done
@@ -577,12 +602,14 @@ generate_node_config() {
   node_config_ref=(
     [node_id]="${node_id}"
     [install_version]="${config[install_version]}"
-    [git_repository]='https://github.com/EquilibriaCC/Equilibria.git'
+    [git_repository]="${config[git_repository]}"
     [running_user]="${config["snode${node_id}__running_user"]}"
     [p2p_bind_port]="${config["snode${node_id}__p2p_bind_port"]}"
     [rpc_bind_port]="${config["snode${node_id}__rpc_bind_port"]}"
     [copy_blockchain]="${config["snode${node_id}__copy_blockchain"]}"
     [copy_binaries]="${config["snode${node_id}__copy_binaries"]}"
+    [daemon_no_fluffy_blocks]="${config[daemon_no_fluffy_blocks]}"
+    [daemon_log_level]="${config[daemon_log_level]}"
     [installer_home]="/home/${config["snode${node_id}__running_user"]}/eqnode_installer"
   )
 }
@@ -627,15 +654,11 @@ copy_installer_to_installer_home() {
   sudo mkdir "${node_config_ref[installer_home]}"
   sudo cp eqsnode.sh eqnode.service.template common.sh "${node_config_ref[installer_home]}"
 
-  install_file_conf_path="${node_config_ref[installer_home]}/install.conf"
+  install_config_file_path="${node_config_ref[installer_home]}/install.conf"
 
-  echo -e "\n\033[1mGenerating new install.conf in '${install_file_conf_path}'...\033[0m"
-  sudo touch "${install_file_conf_path}"
+  echo -e "\n\033[1mGenerating new install.conf in '${install_config_file_path}'...\033[0m"
+  write_config node_config_ref "${install_config_file_path}"
 
-  for key in "${!node_config_ref[@]}"
-  do
-    echo -e "${key}=${node_config[${key}]}" | sudo tee -a "${install_file_conf_path}"
-  done
   sudo chown -R "${node_config_ref[running_user]}":root "${node_config_ref[installer_home]}"
 }
 
@@ -694,8 +717,8 @@ Options:
                                         directory or 'no' to force a fresh download of the
                                         blockchain. Use 'no,auto' when the first node
                                         should download a fresh blockchain, while subsequent
-                                        node installations should copy this fresh blockchain
-                                        download.
+                                        node installations should copy the fresh blockchain
+                                        download from the first node.
 
                                         Examples: --copy-blockchain auto
                                                   --copy-blockchain /home/snode/.equilibria
@@ -704,8 +727,10 @@ Options:
 
   -i --inspect-auto-magic               Display preview of all automatically set port,
                                         users and Equilibria version
+
   -n --nodes [number]                   Number of nodes to install. If --nodes option is
                                         not specified, then only one node will be installed.
+
   -p  --ports [auto|config]             Set port configuration. Format:
                                         p2p:<port[+port+...]>,rpc:<port[+port+...]>
 
@@ -724,16 +749,31 @@ Options:
                                         deleted. Run 'bash $0 --one-passwd-file'
                                         before 'bash $0' for a non-interactive
                                         installation of the service node.
+
   -u --user [auto|name,...]             Set username that will run the service node or
                                         'auto' for autodetect. In case --nodes option is
                                         set you can add multiple usernames comma separated.
+
                                         Examples:   --user snode2
                                                     --user auto
                                                     --nodes 2 --user snode,snode2
                                                     --nodes 2 --user auto
 
-  -v --version [auto|version]           Set Equilibria version with format 'v0.0.0'. Use
-                                        'auto' to install the latest version.
+  -v --version [auto|[version/hash]]    Set Equilibria version tag with format 'v0.0.0'
+                                        or 'master' or git hash. Use 'auto' to install
+                                        the latest version tag. If you do not know which
+                                        version to use choose 'auto' or remove --version
+                                        option from command line
+
+                                        Examples:   --version auto
+                                                    --version master
+                                                    --version v20.0.0
+                                                    --version 122d5f6a6
+
+  --set-daemon-log-level                Add --log-level parameter to daemon command in
+                                        service file.
+
+                                        Example:   --set-daemon-log-level 0,stacktrace:FATAL
 
   -h  --help                            Show this help text
 

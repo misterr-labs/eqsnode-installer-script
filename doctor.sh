@@ -10,7 +10,7 @@ readonly script_basedir
 
 source "${script_basedir}/discovery.sh"
 
-eqnode_doctor_version='v1.3.3'
+eqnode_doctor_version='v1.4.0'
 readonly eqnode_doctor_version
 
 typeset -A doctor_config
@@ -143,20 +143,23 @@ analyze_and_fix() {
   declare -A bad_blockchains='()'
   local badidx=1
   local healthyidx=1
-  local service_node_key service_node_registered_state
+  local service_node_key
 
   for username in "${daemon_users[@]}"
   do
-    echo -e "\n\033[1mChecking health of service node ran by user '${username}'...\033[0m"
+    tput rev; echo -e "\n\033[1m "${username}" \033[0m"; tput sgr0
+    echo -e "\033[1mChecking health of service node ran by user '${username}'...\033[0m"
     service_node_key="$(sudo -H -u "${username}" bash -c 'cd ~/eqnode_installer/ && bash eqsnode.sh print_sn_key' | grep 'Public Key:' | grep -oP '(?<=: )+.*')"
 
     if [[ "${service_node_key}" != "" ]]; then
-      service_node_registered_state="$(wget --quiet https://explorer.equilibriacc.com/service_node/"${service_node_key}" -O - | grep -o -e "Can.t get service node pubkey .*" -e "This oracle node [-a-zA-Z0-9: ]*" )"
-      echo -e "Service Node Registered state:\n${service_node_registered_state}\n"
+      echo -e "Service node key: ${service_node_key}\n"
+      echo -e "\033[1m## Service Node Network Status\033[0m"
+      sudo -H -u "${username}" bash -c 'cd ~/eqnode_installer/ && bash eqsnode.sh print_sn_status'
+      echo -e "\033[1m## END\033[0m"
     fi
     read blocks_done total_blocks perc <<< "$(sudo -H -u "${username}" bash -c 'cd ~/eqnode_installer/ && bash eqsnode.sh status' | grep -o 'Height:.*' | sed -n 's/^Height: \([0-9]*\)\/\([0-9]*\) (\([0-9.]*\).*/\1 \2 \3/p')"
 
-    echo "Local blockchain at block: ${blocks_done}"
+    echo -e "\nLocal blockchain at block: ${blocks_done}"
 
 
     if [[ "${blocks_done}" -lt "${current_block_with_margin}" ]]; then

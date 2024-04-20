@@ -1,14 +1,15 @@
-eqnode_installer_version='v5.1.3'
+eqnode_installer_version='v5.2.0'
 readonly eqnode_installer_version
 
 version_regex="^v[0-9]+.[0-9]+.[0-9]+$"
 readonly version_regex
 
+rev_hash_regex="^[0-9a-f]{5,40}$"
+readonly rev_hash_regex
+
 installer_session_state_file="${script_basedir}/.installsessionstate"
 readonly installer_session_state_file
 
-config_file="${script_basedir}/install.conf"
-readonly config_file
 
 typeset -A config
 config=(
@@ -19,6 +20,8 @@ config=(
   [git_repository]='https://github.com/EquilibriaCC/Equilibria.git'
   [p2p_bind_port]=9230
   [rpc_bind_port]=9231
+  [daemon_log_level]=
+  [daemon_no_fluffy_blocks]=0
 )
 
 typeset -A installer_state
@@ -44,15 +47,33 @@ default_service_node_ports=(
 readonly default_service_node_ports
 
 load_config() {
+  local config_file="$1"
+  local -n config_ref="$2"
   if [[ -f "${config_file}" ]]; then
     while read line; do
       if echo "${line}" | grep -q "="; then
         varname=$(echo "${line}" | cut -d '=' -f 1)
         varvalue=$(echo "${line}" | cut -d '=' -f 2)
-        config[${varname}]=${varvalue}
+        config_ref[${varname}]=${varvalue}
       fi
     done < ${config_file}
   fi
+}
+
+write_config() {
+  local -n node_config_ref="$1"
+  local install_file_conf_path="$2"
+
+  if [[ -f "${install_file_conf_path}" ]]; then
+    sudo rm -Rf "${install_file_conf_path}"
+  fi
+  sudo touch "${install_file_conf_path}"
+
+  for key in "${!node_config_ref[@]}"
+  do
+    echo -e "${key}=${node_config_ref[${key}]}" | sudo tee -a "${install_file_conf_path}"
+  done
+  sudo chown "${node_config_ref[running_user]}":root "${install_file_conf_path}"
 }
 
 set_install_session_state() {
@@ -78,5 +99,3 @@ get_latest_equilibria_version_number() {
 version2num() {
   echo "$@" | awk -F. '{ printf("%d%03d%03d%03d\n", $1, $2, $3, $4); }'
 }
-
-load_config
