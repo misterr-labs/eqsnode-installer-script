@@ -76,7 +76,7 @@ process_command_line_args() {
 }
 
 parse_command_line_args() {
-  args="$(getopt -a -n installer -o "hiob:c:n:p:u:v:" --long help,inspect-auto-magic,one-passwd-file,copy-binaries:,copy-blockchain:,nodes:,ports:,user:,version:,set-daemon-log-level:,daemon_no_fluffy_blocks,git-repository:,open-firewall -- "$@")"
+  args="$(getopt -a -n installer -o "hiob:c:n:p:u:v:" --long help,inspect-auto-magic,one-passwd-file,copy-binaries:,copy-blockchain:,nodes:,ports:,user:,version:,set-daemon-log-level:,set-daemon-no-fluffy-blocks,git-repository:,open-firewall -- "$@")"
   eval set -- "${args}"
 
   while :
