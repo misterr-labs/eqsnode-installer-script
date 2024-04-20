@@ -282,7 +282,10 @@ open_firewall() {
 
   elif [[ "${firewall_mode}" = 'ufw' ]]; then
     echo -e "\n\033[1mOpen firewall p2p port [ufw]...\033[0m"
-    sudo ufw enable
+    sudo ufw --force enable
+
+    # make sure ssh port is open
+    sudo ufw allow 22
     sudo ufw allow "${config[p2p_bind_port]}"
     sudo ufw allow out "${config[p2p_bind_port]}"
   fi
@@ -294,6 +297,11 @@ check_iptables_dependencies() {
       echo iptables-persistent iptables-persistent/autosave_v6 boolean true | sudo debconf-set-selections
 
       sudo apt-get -y install iptables iptables-persistent
+
+      # make sure ssh port is open
+      sudo iptables -A INPUT -p tcp --dport 22 -m conntrack --ctstate NEW,ESTABLISHED -j ACCEPT
+      sudo iptables-save | uniq | sudo tee /etc/iptables/rules.v4 | sudo iptables-restore
+      sudo ip6tables-save | uniq | sudo tee /etc/iptables/rules.v6 | sudo ip6tables-restore
     fi
 }
 
