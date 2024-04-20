@@ -489,9 +489,9 @@ sudoers_user_nopasswd() {
 }
 
 generate_node_config() {
-  local -n node_config_ref="$1"
+  local -n gnc__node_config_ref="$1"
   local node_id="$2"
-  node_config_ref=(
+  gnc__node_config_ref=(
     [node_id]="${node_id}"
     [install_version]="${config[install_version]}"
     [git_repository]="${config[git_repository]}"
@@ -508,39 +508,39 @@ generate_node_config() {
 }
 
 copy_blockchain_to_user_home_if_needed() {
-  local -n node_config_ref="$1"
+  local -n cbtuhin__node_config_ref="$1"
   local source_dir target_dir
 
-  if [[ -d "${node_config_ref[copy_blockchain]}" ]]; then
-    echo -e "\n\033[1mCopying blockchain from '${node_config_ref[copy_blockchain]}'...(takes a minute or two)\033[0m"
-    target_dir="/home/${node_config_ref[running_user]}/.equilibria"
+  if [[ -d "${cbtuhin__node_config_ref[copy_blockchain]}" ]]; then
+    echo -e "\n\033[1mCopying blockchain from '${cbtuhin__node_config_ref[copy_blockchain]}'...(takes 1-5 minutes)\033[0m"
+    target_dir="/home/${cbtuhin__node_config_ref[running_user]}/.equilibria"
 
     if [[ -d "${target_dir}" ]]; then
       # move existing .equilibria directory just to be safe
       sudo mv "${target_dir}" "${target_dir}_$(echo $RANDOM | md5sum | head -c 8)"
     fi
     sudo mkdir "${target_dir}"
-    sudo chmod "$(stat --format '%a' "${node_config_ref[copy_blockchain]}")" "$target_dir"
-    sudo cp -R "${node_config_ref[copy_blockchain]}/lmdb" "${target_dir}"
-    sudo chown -R "${node_config_ref[running_user]}":"${node_config_ref[running_user]}" "${target_dir}"
+    sudo chmod "$(stat --format '%a' "${cbtuhin__node_config_ref[copy_blockchain]}")" "$target_dir"
+    sudo cp -R "${cbtuhin__node_config_ref[copy_blockchain]}/lmdb" "${target_dir}"
+    sudo chown -R "${cbtuhin__node_config_ref[running_user]}":"${cbtuhin__node_config_ref[running_user]}" "${target_dir}"
   fi
 }
 
 copy_installer_to_installer_home() {
-  local -n node_config_ref="$1"
+  local -n citih__node_config_ref="$1"
   local install_file_conf_path
-  [[ -d "${node_config_ref[installer_home]}" ]] && echo -e "\033[1mDeleting old installer files...\033[0m" && sudo rm --recursive --force -- "${node_config_ref[installer_home]}"
+  [[ -d "${citih__node_config_ref[installer_home]}" ]] && echo -e "\033[1mDeleting old installer files...\033[0m" && sudo rm --recursive --force -- "${citih__node_config_ref[installer_home]}"
 
-  echo -e "\n\033[1mCopying installer to '${node_config_ref[installer_home]}'...\033[0m"
-  sudo mkdir "${node_config_ref[installer_home]}"
-  sudo cp eqsnode.sh eqnode.service.template common.sh "${node_config_ref[installer_home]}"
+  echo -e "\n\033[1mCopying installer to '${citih__node_config_ref[installer_home]}'...\033[0m"
+  sudo mkdir "${citih__node_config_ref[installer_home]}"
+  sudo cp eqsnode.sh eqnode.service.template common.sh "${citih__node_config_ref[installer_home]}"
 
-  install_config_file_path="${node_config_ref[installer_home]}/install.conf"
+  install_config_file_path="${citih__node_config_ref[installer_home]}/install.conf"
 
   echo -e "\n\033[1mGenerating new install.conf in '${install_config_file_path}'...\033[0m"
-  write_config node_config_ref "${install_config_file_path}"
+  write_config citih__node_config_ref "${install_config_file_path}"
 
-  sudo chown -R "${node_config_ref[running_user]}":root "${node_config_ref[installer_home]}"
+  sudo chown -R "${citih__node_config_ref[running_user]}":root "${citih__node_config_ref[installer_home]}"
 }
 
 install_node_with_running_user() {

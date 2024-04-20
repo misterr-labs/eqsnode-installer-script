@@ -48,20 +48,20 @@ readonly default_service_node_ports
 
 load_config() {
   local config_file="$1"
-  local -n config_ref="$2"
+  local -n lc__config_ref="$2"
   if [[ -f "${config_file}" ]]; then
     while read line; do
       if echo "${line}" | grep -q "="; then
         varname=$(echo "${line}" | cut -d '=' -f 1)
         varvalue=$(echo "${line}" | cut -d '=' -f 2)
-        config_ref[${varname}]=${varvalue}
+        lc__config_ref[${varname}]=${varvalue}
       fi
     done < ${config_file}
   fi
 }
 
 write_config() {
-  local -n node_config_ref="$1"
+  local -n wc__node_config_ref="$1"
   local install_file_conf_path="$2"
 
   if [[ -f "${install_file_conf_path}" ]]; then
@@ -69,11 +69,11 @@ write_config() {
   fi
   sudo touch "${install_file_conf_path}"
 
-  for key in "${!node_config_ref[@]}"
+  for key in "${!wc__node_config_ref[@]}"
   do
-    echo -e "${key}=${node_config_ref[${key}]}" | sudo tee -a "${install_file_conf_path}"
+    echo -e "${key}=${wc__node_config_ref[${key}]}" | sudo tee -a "${install_file_conf_path}"
   done
-  sudo chown "${node_config_ref[running_user]}":root "${install_file_conf_path}"
+  sudo chown "${wc__node_config_ref[running_user]}":root "${install_file_conf_path}"
 }
 
 #### Common command line option handlers for upgrade.sh & install.sh ###
@@ -158,14 +158,14 @@ upgrade_cmake_if_needed() {
 }
 
 validate_command_line_option_combinations() {
-  local -n valid_option_combination_ref=$1
+  local -n vcloc__valid_option_combination_ref=$1
   local group_option_count command_options_set_string unique_count valid_option_combi_found
   valid_option_combi_found=0
 
   command_options_set_string="$(generate_set_options_string)"
   [[ "${command_options_set_string}" = '' ]] && command_options_set_string='<no_options_set>'
 
-  for option_string in "${valid_option_combination_ref[@]}"
+  for option_string in "${vcloc__valid_option_combination_ref[@]}"
   do
     group_option_count="$(echo "${option_string}" | egrep -o '[^ ]+' | wc -l)"
     unique_count="$(echo "${option_string} ${command_options_set_string}" | egrep -o '[^ ]+' | natsort | uniq | wc -l)"

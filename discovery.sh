@@ -1,23 +1,23 @@
 
 discover_system() {
-  declare -n result="$1"
-  result[distro]="$(lsb_release -a 2> /dev/null | grep -oP 'Distributor ID:\t+\K[a-zA-Z0-9-_\s]+' | awk '{ print tolower($1) }')"
-  result[release]="$(lsb_release -a 2>/dev/null | grep 'Release:' | awk '{ print $2 }')"
-  result[codename]="$(lsb_release -a 2>/dev/null | grep -oP 'Codename:\t+\K[a-zA-Z0-9-_\s]+')"
-  result[memory]="$(grep MemTotal /proc/meminfo 2>/dev/null | awk '{ print $2 }')"
-  result[free_space_root_mount]="$(df /root | awk 'END{ print $4 }')"
-  result[free_space_home_mount]="$(df /home | awk 'END{ print $4 }')"
+  declare -n ds__result="$1"
+  ds__result[distro]="$(lsb_release -a 2> /dev/null | grep -oP 'Distributor ID:\t+\K[a-zA-Z0-9-_\s]+' | awk '{ print tolower($1) }')"
+  ds__result[release]="$(lsb_release -a 2>/dev/null | grep 'Release:' | awk '{ print $2 }')"
+  ds__result[codename]="$(lsb_release -a 2>/dev/null | grep -oP 'Codename:\t+\K[a-zA-Z0-9-_\s]+')"
+  ds__result[memory]="$(grep MemTotal /proc/meminfo 2>/dev/null | awk '{ print $2 }')"
+  ds__result[free_space_root_mount]="$(df /root | awk 'END{ print $4 }')"
+  ds__result[free_space_home_mount]="$(df /home | awk 'END{ print $4 }')"
 
   return 0
 }
 
 discover_daemons() {
-  declare -n result="$1"
+  declare -n dd__result="$1"
   local output_column="$2"
   local idx=0
 
   while read -r line; do
-    result[${idx}]="${line}"
+    dd__result[${idx}]="${line}"
     idx=$((idx + 1))
   done <<< "$(sudo ps -f -o "${output_column}" -o args -ax | grep -e '[b]in/daemon.*--service-node' | gawk '{ print $1 }' | natsort | uniq )"
 
