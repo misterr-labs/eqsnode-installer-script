@@ -285,7 +285,7 @@ open_firewall() {
     sudo ufw --force enable
 
     # make sure ssh port is open
-    sudo ufw allow 22
+    sudo ufw allow ssh
     sudo ufw allow "${config[p2p_bind_port]}"
     sudo ufw allow out "${config[p2p_bind_port]}"
   fi
@@ -300,6 +300,7 @@ check_iptables_dependencies() {
 
       # make sure ssh port is open
       sudo iptables -A INPUT -p tcp --dport 22 -m conntrack --ctstate NEW,ESTABLISHED -j ACCEPT
+      sudo iptables -A OUTPUT -p tcp --sport 22 -m conntrack --ctstate ESTABLISHED -j ACCEPT
       sudo iptables-save | uniq | sudo tee /etc/iptables/rules.v4 | sudo iptables-restore
       sudo ip6tables-save | uniq | sudo tee /etc/iptables/rules.v6 | sudo ip6tables-restore
     fi
