@@ -166,6 +166,9 @@ upgrade_manager() {
 
       sudo -H -u "${username}" bash -c 'cd ~/eqnode_installer/ && bash eqsnode.sh start'
     fi
+    if [[ "${config[open_firewall]}" -eq 1 ]]; then
+      sudo -H -u "${username}" bash -c 'cd ~/eqnode_installer/ && bash eqsnode.sh open_firewall'
+    fi
     idx=$((idx + 1))
   done
 }
