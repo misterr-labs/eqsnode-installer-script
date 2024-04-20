@@ -33,18 +33,18 @@ readonly service_template
 daemon_start_time=
 
 main() {
-  exit 1
   case "$1" in
-    install )       install_node ;;
-    prepare_sn )    prepare_sn ;;
-    start )         start ;;
-    stop )          stop_all_nodes ;;
-    status )        status ;;
-    log )           log ;;
-    fakerun )       sleep 300 ;;
-    fork_update )   fork_update ;;
-    print_sn_key )  print_sn_key ;;
-    print_sn_status )  print_sn_status ;;
+    install)            install_node ;;
+    open_firewall)      open_firewall ;;
+    prepare_sn)         prepare_sn ;;
+    start)              start ;;
+    stop)               stop_all_nodes ;;
+    status)             status ;;
+    log)                log ;;
+    fakerun)            sleep 300 ;;
+    fork_update)        fork_update ;;
+    print_sn_key)       print_sn_key ;;
+    print_sn_status)    print_sn_status ;;
     * ) usage
   esac
 }
@@ -260,6 +260,40 @@ watch_daemon_status() {
 
 finish_eqsnode_install() {
   set_install_session_state "${installer_state[finished_eqsnode_install]}"
+
+  if [[ "${config[open_firewall]}" -eq 1 ]]; then
+    open_firewall
+  fi
+}
+
+open_firewall() {
+  local firewall_mode='iptables';
+
+  [[ -x "$(command -v ufw)" ]] && firewall_mode='ufw'
+
+  if [[ "${firewall_mode}" = 'iptables' ]]; then
+    echo -e "\n\033[1mOpen firewall p2p port "${config[p2p_bind_port]}" [iptables]...\033[0m"
+    check_iptables_dependencies
+
+    sudo iptables -A INPUT -p tcp --dport "${config[p2p_bind_port]}" -m conntrack --ctstate NEW,ESTABLISHED -j ACCEPT
+    sudo iptables -A OUTPUT -p tcp --sport "${config[p2p_bind_port]}" -m conntrack --ctstate ESTABLISHED -j ACCEPT
+    sudo iptables-save | uniq | sudo tee /etc/iptables/rules.v4 | sudo iptables-restore
+    sudo ip6tables-save | uniq | sudo tee /etc/iptables/rules.v6 | sudo ip6tables-restore
+
+  elif [[ "${firewall_mode}" = 'ufw' ]]; then
+    echo -e "\n\033[1mOpen firewall p2p port [ufw]...\033[0m"
+    sudo ufw enable
+    sudo ufw allow "${config[p2p_bind_port]}"
+  fi
+}
+
+check_iptables_dependencies() {
+    if ! [[ -x "$(command -v iptables)" && -x "$(command -v iptables-save)" ]]; then
+      echo iptables-persistent iptables-persistent/autosave_v4 boolean true | sudo debconf-set-selections
+      echo iptables-persistent iptables-persistent/autosave_v6 boolean true | sudo debconf-set-selections
+
+      sudo apt-get -y install iptables iptables-persistent
+    fi
 }
 
 prepare_sn() {
@@ -321,17 +355,18 @@ usage() {
 bash $0 [COMMAND...] [OPTION...]
 
 Commands:
-  install             Install of Equilibria service node
-  start               Start Equilibria service node
-  stop                Stop Equilibria service node
-  prepare_sn          Prepare Equilibria service node for staking
-  print_sn_key        Print service node key
-  print_sn_status     Print service node registered status
-  status              Check service status
-  log                 View service log
+  install                         Install of Equilibria service node
+  open_firewall [iptables|ufw]    Open firewall for p2p in/out ports
+  start                           Start Equilibria service node
+  stop                            Stop Equilibria service node
+  prepare_sn                      Prepare Equilibria service node for staking
+  print_sn_key                    Print service node key
+  print_sn_status                 Print service node registered status
+  status                          Check service status
+  log                             View service log
 
 Options:
-  -h  --help          Show this help text
+  -h  --help                      Show this help text
 
 USAGEMSG
 }
