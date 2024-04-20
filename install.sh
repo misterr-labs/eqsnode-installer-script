@@ -452,7 +452,6 @@ setup_all_running_users() {
 
   while [ "${idx}" -le "${config[nodes]}" ]; do
     echo -e "\n\033[1mSetting up user '${config["snode${idx}__running_user"]}' to run service node ${idx}...\033[0m\n"
-    tput rev; echo -e "\n\033[1m "${config["snode${idx}__running_user"]}" \033[0m"; tput sgr0
     setup_running_user "${config["snode${idx}__running_user"]}"
     idx=$((idx + 1))
   done
