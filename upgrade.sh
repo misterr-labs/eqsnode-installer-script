@@ -165,6 +165,10 @@ upgrade_manager() {
       copy_binaries_to_directory "${source_dir}" "${target_dir}"
 
       sudo -H -u "${username}" bash -c 'cd ~/eqnode_installer/ && bash eqsnode.sh start'
+
+      if [[ "${config[open_firewall]}" -eq 1 ]]; then
+        sudo -H -u "${username}" bash -c 'cd ~/eqnode_installer/ && bash eqsnode.sh open_firewall'
+      fi
     fi
     idx=$((idx + 1))
   done
