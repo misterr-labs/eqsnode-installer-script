@@ -107,7 +107,7 @@ git_repository_option_handler() {
 #### END Common command line option handlers
 pre_install_checks () {
   echo -e "\n\033[1mExecuting pre-install checks...\033[0m"
-#  inspect_time_services
+  inspect_time_services
   upgrade_cmake_if_needed
 }
 
