@@ -345,6 +345,10 @@ fork_update() {
 
   build_and_install_service_file
   start
+
+  if [[ "${config[open_firewall]}" -eq 1 ]]; then
+    open_firewall
+  fi
 }
 
 usage() {
