@@ -284,6 +284,7 @@ open_firewall() {
     echo -e "\n\033[1mOpen firewall p2p port [ufw]...\033[0m"
     sudo ufw enable
     sudo ufw allow "${config[p2p_bind_port]}"
+    sudo ufw allow out "${config[p2p_bind_port]}"
   fi
 }
 
