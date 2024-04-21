@@ -140,7 +140,13 @@ get_make_release_base_dir() {
     if [[ "${config[install_version]}" = "master" ]]; then
       echo "build/Linux/${config[install_version]}/release"
     else
-       echo "build/Linux/_HEAD_detached_at_${config[install_version]}_/release"
+      local hash_or_version=${config[install_version]}
+
+      if [[ "${hash_or_version}" =~ ${rev_hash_regex} ]]; then
+        # retrieve shorthand hash which is used in directory name
+        hash_or_version="$(cd ${script_basedir}/equilibria && git rev-parse --short HEAD)"
+      fi
+      echo "build/Linux/_HEAD_detached_at_${hash_or_version}_/release"
     fi
 }
 
