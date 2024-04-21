@@ -11,7 +11,7 @@ cd eqsnode-installer-script
 #### Already pulled this script from Github before? Update it to the latest version:
 ```
 cd ~/eqsnode-installer-script
-git pull
+git pull --force
 ```
 
 ## Installation of a service node
@@ -82,7 +82,7 @@ git pull
 
 `bash install.sh --nodes 3 --version 122d5f6a6`
 
-#### Omitting the `--version` option will install the latest officially released version (letest version tag).
+#### Omitting the `--version` option will install the latest officially released version (latest version tag).
 
 ### Avoid repeated manual password input for service node users
 #### In case you install multiple nodes with the --nodes option, it can be annoying to input password and re-passwords many times. To avoid this, use below command to set one password a single time and all newly created service node users will use this one password (stored encrypted).
