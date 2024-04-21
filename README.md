@@ -15,8 +15,9 @@ git pull
 ```
 
 ## Installation of a service node
-`bash install.sh`
+`bash install.sh --open-firewall`
 
+#### It is recommended to install or upgrade with the option `--open-firewall` which will open the P2P in/out ports so the node can interact with other service nodes. 
 
 #### While not required it is recommended to inspect the auto-magic behind the scenes first.
 
@@ -26,15 +27,26 @@ git pull
 
 #### Install multiple nodes with just one command:
 
-`bash install.sh --nodes 2`
+`bash install.sh --nodes 2 --open-firewall`
 #### Suggestion: have a look at the --one-passwd-file option in the Advanced features section
 
 #### Note: while not required it is recommended to inspect the auto-magic behind the scenes first, to double check if everything looks good.
 `bash install.sh --nodes 2 -i`
 <br />
-## Build in help
+## Build in help for install.sh and upgrade.sh
 #### Run the following to get a list of commands you can use:
 `bash install.sh --help`
+
+`bash upgrade.sh --help`
+
+## Upgrading a service node
+#### For example to upgrade nodes ran by users `snode` and `snode2` to the latest officially released version:
+`bash upgrade.sh --user snode,snode2`
+
+#### Or a more advanced version:
+`bash upgrade.sh --user snode,snode2 --open-firewall --set-daemon-log-level 0,stacktrace:FATAL`
+
+
 
 ## Advanced features
 
@@ -60,6 +72,17 @@ git pull
 `bash install.sh --nodes 3 --copy-blockchain no,auto`
 
 #### Note: using '--copy-blockchain no' will dramatically increase the installation time when installing multiple nodes
+
+### Some other highlighted options:
+#### OPTION: `--set-daemon-log-level` which allows you to control the log level of the daemon to log less or more information. 
+`bash install.sh --nodes 3 --set-daemon-log-level 0,stacktrace:FATAL`
+
+#### OPTION: `--version` installs/upgrades to a specific version, by version tag, 'master' branch or git hash code. For example:
+`bash install.sh --nodes 3 --version v20.1.1`
+
+`bash install.sh --nodes 3 --version 122d5f6a6`
+
+#### Omitting the `--version` option will install the latest officially released version (letest version tag).
 
 ### Avoid repeated manual password input for service node users
 #### In case you install multiple nodes with the --nodes option, it can be annoying to input password and re-passwords many times. To avoid this, use below command to set one password a single time and all newly created service node users will use this one password (stored encrypted).
