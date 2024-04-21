@@ -144,7 +144,7 @@ get_make_release_base_dir() {
 
       if [[ "${hash_or_version}" =~ ${rev_hash_regex} ]]; then
         # retrieve shorthand hash which is used in directory name
-        hash_or_version="$(cd ${script_basedir}/equilibria && git rev-parse --short HEAD)"
+        hash_or_version="$(cd "${script_basedir}"/equilibria && git rev-parse --short HEAD)"
       fi
       echo "build/Linux/_HEAD_detached_at_${hash_or_version}_/release"
     fi
