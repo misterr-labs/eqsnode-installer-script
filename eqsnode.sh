@@ -42,6 +42,7 @@ main() {
     status)             status ;;
     log)                log ;;
     fakerun)            sleep 300 ;;
+    setup_service)     build_and_install_service_file ;;
     fork_update)        fork_update ;;
     print_sn_key)       print_sn_key ;;
     print_sn_status)    print_sn_status ;;
@@ -377,6 +378,7 @@ Commands:
   stop                            Stop Equilibria service node
   prepare_sn                      Prepare Equilibria service node for staking
   print_sn_key                    Print service node key
+  setup_service                   Generate and install new service file based on install.conf
   print_sn_status                 Print service node registered status
   status                          Check service status
   log                             View service log
