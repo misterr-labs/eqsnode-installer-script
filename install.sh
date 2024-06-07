@@ -151,7 +151,7 @@ nodes_option_handler() {
 
   max_nodes_by_free_space="$((system_info[free_space_home_mount] / 1024 / 38000))"
   # reserved 768MB memory for system use
-  max_nodes_by_memory="$((((system_info[memory] / 1024) - 768) / 1400))"
+  max_nodes_by_memory="$((((system_info[memory] / 1024) - 768) / 1300))"
   [[ "${max_nodes_by_memory}" -gt "$max_nodes_by_free_space" ]] && max_nodes="${max_nodes_by_memory}" || max_nodes="${max_nodes_by_free_space}"
 
   if [[ "$1" -gt "${max_nodes}" ]]; then

@@ -1,4 +1,4 @@
-eqnode_installer_version='v6.0.2'
+eqnode_installer_version='v6.0.3'
 readonly eqnode_installer_version
 
 version_regex="^v[0-9]+.[0-9]+.[0-9]+$"
