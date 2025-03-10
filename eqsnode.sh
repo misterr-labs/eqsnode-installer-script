@@ -138,17 +138,8 @@ compile_and_move_binaries() {
 }
 
 get_make_release_base_dir() {
-    if [[ "${config[install_version]}" = "master" ]]; then
-      echo "build/Linux/${config[install_version]}/release"
-    else
-      local hash_or_version=${config[install_version]}
-
-      if [[ "${hash_or_version}" =~ ${rev_hash_regex} ]]; then
-        # retrieve shorthand hash which is used in directory name
-        hash_or_version="$(cd "${script_basedir}"/equilibria && git rev-parse --short HEAD)"
-      fi
-      echo "build/Linux/_HEAD_detached_at_${hash_or_version}_/release"
-    fi
+   build_directory="$(ls "${script_basedir}"/equilibria/build/Linux)"
+   echo "build/Linux/${build_directory}/release"
 }
 
 build_and_install_service_file() {
